@@ -47,17 +47,19 @@ public class Robot extends IterativeRobot {
     AHRS navx;
     NetworkTable table;
     
+    //JAGUARS
     final int pwm1 = 1; // left front motor
     final int pwm2 = 2; // right front motor
     final int pwm3 = 3; // left back motor
     final int pwm4 = 4; // right back motor
     
+    //CONTROLLER USB PORTS
     final int usb0 = 0; //Right
     final int usb1 = 1; //Left
     
     final int axisY = 1;
     
-    //JAGUARS
+    //SOLENOIDS
     final int pcm0 = 0; 
     final int pcm1 = 1;
     final int pcm2 = 2;
@@ -97,14 +99,15 @@ public class Robot extends IterativeRobot {
     double targetAquired;
     double targetCenterDistance;
     
+    //unused
     boolean autoEnable;
-    
     double turretSpeed;
     
     //ENCODERS
     double encLeftDriveDistance;
     double encRightDriveDistance;
 
+    //AUTONOMOUS VALUES
     double nvYaw;
     int state;
     
@@ -118,7 +121,7 @@ public class Robot extends IterativeRobot {
         chooser.addObject("My Auto", customAuto);
         SmartDashboard.putData("Auto choices", chooser);
         
-        navx = new AHRS(SPI.Port.kMXP);
+        
         
         
 
@@ -146,6 +149,7 @@ public class Robot extends IterativeRobot {
          *
          */
         
+        //TURRET PID CONTROLLER
         turretMotor_pidOutput = new GenericPidOutput();
         turretMotor_pidSource = new GenericPidSource();
         turretPID = new PIDController(0.00625, 0.0, 0.0, turretMotor_pidSource, turretMotor_pidOutput);
@@ -155,11 +159,12 @@ public class Robot extends IterativeRobot {
         turretPID.setOutputRange(-1.0, 1.0);
         
         turretPID.setPercentTolerance(5.0);
-        
         turretPID.enable();
         
         table = NetworkTable.getTable("dataTable");
         
+        //AUTONOMOUS INUT
+        navx = new AHRS(SPI.Port.kMXP);
         state = 0;
         /*
         new Thread(() -> {
@@ -178,36 +183,53 @@ public class Robot extends IterativeRobot {
         //setPercentTolerance
         //setSetpoint (target)
         
+        //JAGUAR MOTORS
         motorFrontRight = new Jaguar(pwm1);
         motorFrontLeft = new Jaguar(pwm2);
         motorBackRight = new Jaguar(pwm3);
         motorBackLeft = new Jaguar(pwm4);
         
+        //JOYSTICKS
         jsRight = new Joystick(usb1);
         jsLeft = new Joystick(usb0);
         
+        //COMPRESSOR
         compressor = new Compressor();
         compressor.start();
         // compressor.stop();
         
+        //SHIFTERS
         pistonShift = new DoubleSolenoid(pcm0, pcm1);
         pistonShift.set(DoubleSolenoid.Value.kReverse);
         pistonIntake = new DoubleSolenoid(pcm2, pcm3);
         pistonIntake.set(DoubleSolenoid.Value.kReverse);
         
+        //TALON CHANNELS
         intakeMotor = new Talon(0);
         turretMotor = new CANTalon(0);
         shooterMotor = new CANTalon(5);
         
+        //ENCODER CHANNELS
         encLeftDrive = new Encoder(0,1);
         encRightDrive = new Encoder(2,3);
         
+        //INITIALIZE BUTTONS FALSE
+        leftBTN = false;
+        leftBTN2 = false;
+        leftBTN3 = false;
+        leftBTN4 = false;
+        leftBTN5 = false;
         leftBTN6 = false;
         leftBTN7 = false;
         leftBTN8 = false;
         leftBTN9 = false;
         leftBTN10 = false;
         
+        rightBTN = false;
+        rightBTN2 = false;
+        rightBTN3 = false;
+        rightBTN4 = false;
+        rightBTN5 = false;
         rightBTN6 = false;
         rightBTN7 = false;
         rightBTN8 = false;
@@ -417,6 +439,13 @@ public class Robot extends IterativeRobot {
         leftBTN9 = jsLeft.getRawButton(9);
         leftBTN10 = jsLeft.getRawButton(10);
        
+        rightBTN = jsRight.getRawButton(8);
+        rightBTN2 = jsRight.getRawButton(9);
+        rightBTN3 = jsRight.getRawButton(10);
+        rightBTN4 = jsRight.getRawButton(8);
+        rightBTN5 = jsRight.getRawButton(9);
+        rightBTN6 = jsRight.getRawButton(10);
+        rightBTN7 = jsRight.getRawButton(11);
         rightBTN8 = jsRight.getRawButton(8);
         rightBTN9 = jsRight.getRawButton(9);
         rightBTN10 = jsRight.getRawButton(10);
