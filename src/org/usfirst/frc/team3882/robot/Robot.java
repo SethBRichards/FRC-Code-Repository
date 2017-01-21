@@ -281,8 +281,6 @@ public class Robot extends IterativeRobot {
              }
          }).start();
        */
-
-        
     }
     
     /**
@@ -298,9 +296,6 @@ public class Robot extends IterativeRobot {
         autoSelected = (String) chooser.getSelected();
 //        autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
         System.out.println("Auto selected: " + autoSelected);
-    
-       
-        
         
     }
 
@@ -315,15 +310,12 @@ public class Robot extends IterativeRobot {
         case defaultAuto:
         default:
         //Put default auto code here
-     
-            
-    
+ 
             break;
         }
     }
 
-    
-    //AUTONOMOUS MOTION FORWARD(NEGATIVE) AND BACKWARD(POSITIVE)
+    //AUTONOMOUS MOTION FORWARD(NEGATIVE) AND BACKWARD(POSITIVE)--------------------------------------------------------------
     public int straightDirection(double x)
     {
     	int result = 0;
@@ -361,8 +353,9 @@ public class Robot extends IterativeRobot {
     	
     	return result;
 	}
+    //--------------------------------------------------------------------------------------------------------------------------
     
-    //AUTONOMOUS MOTION TURNING(Negative Left, Positive Right)
+    //AUTONOMOUS MOTION TURNING(Negative Left, Positive Right)*****************************************************************8
     public int turnDirection(double c)
     {
     	int result = 0;
@@ -399,7 +392,7 @@ public class Robot extends IterativeRobot {
 		}		
     	return result;
     }
-    
+    //***************************************************************************************************************************
     /**
      * This function is called periodically during operator control
      */
