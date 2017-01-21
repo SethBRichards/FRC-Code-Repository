@@ -30,7 +30,8 @@ import com.kauailabs.navx.frc.Quaternion;
  * directory.
  */
 public class Robot extends IterativeRobot {
-    final String defaultAuto = "Default";
+   //shootz bruda kine auntie howzit lolo taht broke da mout yeah?
+	final String defaultAuto = "Default";
     final String customAuto = "My Auto";
     String autoSelected;
     SendableChooser chooser;
@@ -120,11 +121,6 @@ public class Robot extends IterativeRobot {
         chooser.addDefault("Default Auto", defaultAuto);
         chooser.addObject("My Auto", customAuto);
         SmartDashboard.putData("Auto choices", chooser);
-        
-        
-        
-        
-
         
         /*
          * Testing using RoboRealm
@@ -399,6 +395,13 @@ public class Robot extends IterativeRobot {
     @SuppressWarnings("deprecation")
     public void teleopPeriodic() 
     {
+        //TURRET PID CONTOLLER
+      	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
+          turretTicks = turretMotor.getEncPosition();
+          
+          targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
+          targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+    	
         //CONTROLLERS
     	
         jsRightAxisY = jsRight.getRawAxis(axisY);
@@ -528,9 +531,10 @@ public class Robot extends IterativeRobot {
         	}
         	else if (state == 9)
         	{
-        		
-        		
-        		
+        		 if(targetAquired == 1.0)
+        	        {
+        	        	turretMotor_pidSource.pidInput = targetCenterDistance;
+        	        }  
         	}
         }       
         else
@@ -644,10 +648,6 @@ public class Robot extends IterativeRobot {
       //ENCODER DISTANCE
     	encLeftDriveDistance = encLeftDrive.getDistance();
         encRightDriveDistance = encRightDrive.getDistance();
-    	
-        //TURRET PID CONTOLLER
-    	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
-        turretTicks = turretMotor.getEncPosition();
         
         targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
@@ -656,29 +656,9 @@ public class Robot extends IterativeRobot {
         if(targetAquired == 1.0)
         {
         	turretMotor_pidSource.pidInput = targetCenterDistance;
-        }   
-        //intake piston control
-        rightBTN = jsRight.getRawButton(1);
-        leftBTN = jsLeft.getRawButton(1);
+        }  
         
-        //intake motor control
-        //rightBTN2 = jsRight.getRawButton(2);
-        //rightBTN3 = jsRight.getRawButton(3);
-        
-        //turret control
-        leftBTN2 = jsLeft.getRawButton(2);
-        leftBTN3 = jsLeft.getRawButton(3);
-        
-        // shooter control
-        //rightBTN4 = jsRight.getRawButton(4);
-        //rightBTN5 = jsRight.getRawButton(5);
-        
-        //Get turret buttons
-        leftBTN6 = jsLeft.getRawButton(6);
-        //leftBTN7 = jsLeft.getRawButton(7);
-        leftBTN8 = jsLeft.getRawButton(8);
-        leftBTN9 = jsLeft.getRawButton(9);
-       // leftBTN10 = jsLeft.getRawButton(10);
+    
         
         
         // drive chain high/low gear
