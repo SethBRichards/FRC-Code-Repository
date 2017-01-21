@@ -515,6 +515,22 @@ public class Robot extends IterativeRobot {
         		 {
         			 state = 8;
         		 }
+        	
+        	}
+        	else if (state == 8)
+        	{
+        		motorFrontRight.set(0);
+    			motorBackRight.set(0);
+    			motorFrontLeft.set(0);
+    			motorBackLeft.set(0);
+        		state = 9;
+        		
+        	}
+        	else if (state == 9)
+        	{
+        		
+        		
+        		
         	}
         }       
         else
