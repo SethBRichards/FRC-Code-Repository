@@ -404,59 +404,52 @@ public class Robot extends IterativeRobot {
      * This function is called periodically during operator control
      */
     @SuppressWarnings("deprecation")
-    public void teleopPeriodic() {
-    	// YAW
-    	nvYaw = navx.getAngle();
+    public void teleopPeriodic() 
+    {
+        //CONTROLLERS
     	
-    	rightBTN7 = jsRight.getRawButton(7);
-    	if (rightBTN7)
-    	{
-    		navx.reset();
-    	}
-    	
-    	//ENCODER DISTANCE
-    	encLeftDriveDistance = encLeftDrive.getDistance();
-        encRightDriveDistance = encRightDrive.getDistance();
-    	
-        //TURRET PID CONTOLLER
-    	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
-        turretTicks = turretMotor.getEncPosition();
-        
-        targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
-        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
-        
-        //fakey object
-        if(targetAquired == 1.0)
-        {
-        	turretMotor_pidSource.pidInput = targetCenterDistance;
-        }       
-        
-        //controllers
         jsRightAxisY = jsRight.getRawAxis(axisY);
         jsLeftAxisY = -1 * jsLeft.getRawAxis(axisY);
         
+        leftBTN = jsLeft.getRawButton(1);
+        leftBTN2 = jsLeft.getRawButton(2);
+        leftBTN3 = jsLeft.getRawButton(3);
+        leftBTN4 = jsLeft.getRawButton(4);
+        leftBTN5 = jsLeft.getRawButton(5);
+        leftBTN6 = jsLeft.getRawButton(6);
         leftBTN7 = jsLeft.getRawButton(7);
+        leftBTN8 = jsLeft.getRawButton(8);
         leftBTN9 = jsLeft.getRawButton(9);
         leftBTN10 = jsLeft.getRawButton(10);
-       
-        rightBTN = jsRight.getRawButton(8);
-        rightBTN2 = jsRight.getRawButton(9);
-        rightBTN3 = jsRight.getRawButton(10);
-        rightBTN4 = jsRight.getRawButton(8);
-        rightBTN5 = jsRight.getRawButton(9);
-        rightBTN6 = jsRight.getRawButton(10);
-        rightBTN7 = jsRight.getRawButton(11);
+        //leftBTN11 = jsLeft.getRawButton(11);
+        
+        rightBTN = jsRight.getRawButton(1);
+        rightBTN2 = jsRight.getRawButton(2);
+        rightBTN3 = jsRight.getRawButton(3);
+        rightBTN4 = jsRight.getRawButton(4);
+        rightBTN5 = jsRight.getRawButton(5);
+        rightBTN6 = jsRight.getRawButton(6);
+        rightBTN7 = jsRight.getRawButton(7);
         rightBTN8 = jsRight.getRawButton(8);
         rightBTN9 = jsRight.getRawButton(9);
         rightBTN10 = jsRight.getRawButton(10);
         rightBTN11 = jsRight.getRawButton(11);
         
-        //TESTING STATE
+    	// YAW
+    	nvYaw = navx.getAngle();
+    	
+    	//RESET NAVX BUTTON
+    	if (rightBTN7)
+    	{
+    		navx.reset();
+    	}
+    	
+        //TESTING STATE FORMAT
         System.out.println(encLeftDriveDistance);
         System.out.println(rightBTN10);
         System.out.println("state   " + state);
         
-        //STATE FOR AUTONOMOUS MOTION
+        //STATE FOR AUTONOMOUS MOTION////////////////////////////////////////////////////////////////////
         if (rightBTN11)
         {
         	encLeftDrive.reset();
@@ -539,6 +532,7 @@ public class Robot extends IterativeRobot {
   		    motorBackLeft.set(jsLeftAxisY);  
   		    
   		    } 
+        ////////////////////////////////////////////////////////////////////////////////////////////////////
        //OLD CODE FOR TESTING MOTION ///////////////////////////////////////////////////////////////
         
       /*  if (rightBTN10)
@@ -638,6 +632,22 @@ public class Robot extends IterativeRobot {
         //SmartDashboard.putNumber("Right Joystick Y Axis", jsRightAxisY);
         //SmartDashboard.putNumber("Left Joystick Y Axis", jsLeftAxisY);
         
+      //ENCODER DISTANCE
+    	encLeftDriveDistance = encLeftDrive.getDistance();
+        encRightDriveDistance = encRightDrive.getDistance();
+    	
+        //TURRET PID CONTOLLER
+    	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
+        turretTicks = turretMotor.getEncPosition();
+        
+        targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        
+        //fakey object
+        if(targetAquired == 1.0)
+        {
+        	turretMotor_pidSource.pidInput = targetCenterDistance;
+        }   
         //intake piston control
         rightBTN = jsRight.getRawButton(1);
         leftBTN = jsLeft.getRawButton(1);
@@ -737,6 +747,8 @@ public class Robot extends IterativeRobot {
         System.out.println("       ");
         System.out.println("YAW" + nvYaw);
         System.out.println("        ");
+        
+        
         
         
         //CONSOLE PID DATA
