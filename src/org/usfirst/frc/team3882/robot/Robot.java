@@ -192,13 +192,15 @@ public class Robot extends IterativeRobot {
 
         encLeftDriveDistance = encLeftDrive.getDistance();
         encLeftDriveDistance = encRightDrive.getDistance();
-        encoderTicks = encLeftDrive.get();
         
+        
+    }
         public void autonomousInit() {
         autoSelected = (String) chooser.getSelected();
         System.out.println("Auto selected: " + autoSelected);
 
     }
+    
 
     public void autonomousPeriodic() {
         switch(autoSelected) {
@@ -355,12 +357,13 @@ public class Robot extends IterativeRobot {
         
         
         
-        
+    	encoderTicks = encLeftDrive.get();
 
         //SEQUENCING ZONE////////////////////////////////////////////////////////////////////
         if (rightBTN11)
         {
         	encLeftDrive.reset();
+        	state = 0;
     	}
 
         if (rightBTN10)
@@ -370,54 +373,63 @@ public class Robot extends IterativeRobot {
                 motorBackRight.set(-0.2);
                 motorFrontLeft.set(0.2);
                 motorBackLeft.set(0.2);
+                state = 1;
             }
             else if (encoderTicks < -1000 && encoderTicks > -2500) {
                 motorFrontRight.set(-0.45);
                 motorBackRight.set(-0.45);
                 motorFrontLeft.set(0.45);
                 motorBackLeft.set(0.45);
+                state = 2;
             }
             else if (encoderTicks < -2500 && encoderTicks > -4000) {
                 motorFrontRight.set(-0.65);
                 motorBackRight.set(-0.65);
                 motorFrontLeft.set(0.65);
                 motorBackLeft.set(0.65);
+                state = 3;
             }
             else if (encoderTicks < -4000 && encoderTicks > -5500) {
                 motorFrontRight.set(-0.85);
                 motorBackRight.set(-0.85);
                 motorFrontLeft.set(0.85);
                 motorBackLeft.set(0.85);
+                state = 4;
             }
             else if (encoderTicks < -5500 && encoderTicks > -7500) {
                 motorFrontRight.set(-0.85);
                 motorBackRight.set(-0.85);
                 motorFrontLeft.set(0.85);
                 motorBackLeft.set(0.85);
+                state = 5;
             }
             else if (encoderTicks < -7500 && encoderTicks > -8500) {
                 motorFrontRight.set(-0.75);
                 motorBackRight.set(-0.75);
                 motorFrontLeft.set(0.75);
                 motorBackLeft.set(0.75);
+                state = 6;
             }
             else if (encoderTicks < -8500 && encoderTicks > -9400) {
                 motorFrontRight.set(-0.35);
                 motorBackRight.set(-0.35);
                 motorFrontLeft.set(0.35);
                 motorBackLeft.set(0.35);
+                state = 7;
             }
             else if (encoderTicks < -9400 && encoderTicks > -10000) {
                 motorFrontRight.set(-0.2);
                 motorBackRight.set(-0.2);
                 motorFrontLeft.set(0.2);
                 motorBackLeft.set(0.2);
+                state = 8;
             }
-            else if (encoderTicks =< -1000) {
+            else if (encoderTicks <= -1000) {
                 motorFrontRight.set(-0);
                 motorBackRight.set(-0);
                 motorFrontLeft.set(0);
                 motorBackLeft.set(0);
+                state = 9;
             }
         }
         else
@@ -426,7 +438,7 @@ public class Robot extends IterativeRobot {
   		    motorBackRight.set(jsRightAxisY);
   		    motorFrontLeft.set(jsLeftAxisY);
   		    motorBackLeft.set(jsLeftAxisY);
-
+  		    state = 101;
   		    }
         
 
@@ -523,9 +535,9 @@ public class Robot extends IterativeRobot {
         /* CONSOLE OUTPUT ZONE */
         
         //TESTING STATE FORMAT
-        System.out.println(encLeftDriveDistance);
+        System.out.println(encoderTicks);
         System.out.println(rightBTN10);
-        System.out.println("state   " + state);
+        System.out.println("state " + state);
         
         System.out.println("JS RIGHT" + jsRightAxisY);
         System.out.println("JS LEFT" + jsLeftAxisY);
