@@ -1,10 +1,8 @@
-# LUNASTOSHIBA
-toshiba
-eh bruda shootz cuz ehat be da kine up in this valley, yeah bruda cuz auntie shootz kine?
+# MASTER LOCATED ON TOSHIBA
 
+do not overwrite master w/o perm.
 
-IM ADDING SOMETHING TO THE README THANK U
+please.
+don't.
 
-shootsbra-diololol
-
-nerw
+i mean it.
