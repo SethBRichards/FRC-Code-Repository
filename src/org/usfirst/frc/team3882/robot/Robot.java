@@ -405,85 +405,179 @@ public class Robot extends IterativeRobot {
     }
     public int closedLoopForward(double n) {
     	int result = 0;
-    	encoderTicks = encLeftDrive.get();
+    	//encoderTicks = encLeftDrive.get();
     	//System.out.println("Initial Calculation" +(n * -.05));
     	
     	System.out.println("closedLoopForward: CALLED");
     	
-    	if (encoderTicks > (n * -.05)) {
-            motorFrontRight.set(-0.4);
-            motorBackRight.set(-0.4);
-            motorFrontLeft.set(0.4);
-            motorBackLeft.set(0.4);
-            //state = 1;
-            System.out.println("closedLoopForward:  Section 1");
-        }
-        else if (encoderTicks <= (n * -.05) && encoderTicks >= (n * -.1)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 2;
-            System.out.println("closedLoopForward:  Section 2");
-        }
-        else if (encoderTicks <= (n *-.1) && encoderTicks >= (n *-.175)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 3;
-            System.out.println("closedLoopForward:  Section 3");
-        }
-        else if (encoderTicks <= (n*-.175) && encoderTicks >= (n*-.6)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 4;
-            System.out.println("closedLoopForward:  Section 4");
-        }
-        else if (encoderTicks <= (n*-.6) && encoderTicks >= (n*-.75)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 5;
-            System.out.println("closedLoopForward:  Section 5");
-        }
-        else if (encoderTicks <= (n*-.75) && encoderTicks >= (n*-.85)) {
-            motorFrontRight.set(-0.62);
-            motorBackRight.set(-0.62);
-            motorFrontLeft.set(0.62);
-            motorBackLeft.set(0.62);
-            //state = 6;
-            System.out.println("closedLoopForward:  Section 6");
-        }
-        else if (encoderTicks < (n*-.85) && encoderTicks > (n*-.94)) {
-            motorFrontRight.set(-0.21);
-            motorBackRight.set(-0.21);
-            motorFrontLeft.set(0.21);
-            motorBackLeft.set(0.21);
-            //state = 7;
-            System.out.println("closedLoopForward:  Section 7");
-        }
-        else if (encoderTicks < (n*-.94) && encoderTicks > (n*-1)) {
-            motorFrontRight.set(-0.13);
-            motorBackRight.set(-0.13);
-            motorFrontLeft.set(0.13);
-            motorBackLeft.set(0.13);
-            //state = 8;
-            System.out.println("closedLoopForward:  Section 8");
-        }
-        else if (encoderTicks <= (n*-1)) {
-            motorFrontRight.set(-0);
-            motorBackRight.set(-0);
-            motorFrontLeft.set(0);
-            motorBackLeft.set(0);
-            //state = 9;
-            result = 1;
-            System.out.println("closedLoopForward:  Section 9");
-        }
-    	return result;
+    	
+    	if (n > 0)
+    	{
+	    	if (encoderTicks > (-250)) {
+	            motorFrontRight.set(-0.4);
+	            motorBackRight.set(-0.4);
+	            motorFrontLeft.set(0.4);
+	            motorBackLeft.set(0.4);
+	            //state = 1;
+	            System.out.println("closedLoopForward:  Section 1");
+	        }
+	        else if (encoderTicks <= -250 && encoderTicks >= (-900)) {
+	            motorFrontRight.set(-1.0);
+	            motorBackRight.set(-1.0);
+	            motorFrontLeft.set(1.0);
+	            motorBackLeft.set(1.0);
+	            //state = 2;
+	            System.out.println("closedLoopForward:  Section 2");
+	        }
+	        else if (encoderTicks <= ( -900) && encoderTicks >= (-2100)) {
+	            motorFrontRight.set(-0.8);
+	            motorBackRight.set(-0.8);
+	            motorFrontLeft.set(0.8);
+	            motorBackLeft.set(0.8);
+	            //state = 3;
+	            System.out.println("closedLoopForward:  Section 3");
+	        }
+	        else if (encoderTicks <= (-2100) && encoderTicks >= (-n*0.75)) {
+	            motorFrontRight.set(-1.0);
+	            motorBackRight.set(-1.0);
+	            motorFrontLeft.set(1.0);
+	            motorBackLeft.set(1.0);
+	            //state = 4;
+	            System.out.println("closedLoopForward:  Section 4");
+	        }
+	        else if (encoderTicks <= (-n*0.75) && encoderTicks >= (-n*.85)) {
+	            motorFrontRight.set(-0.62);
+	            motorBackRight.set(-0.62);
+	            motorFrontLeft.set(0.62);
+	            motorBackLeft.set(0.62);
+	            //state = 5;
+	            System.out.println("closedLoopForward:  Section 5");
+	        }
+	        else if (encoderTicks <= (-n*.85) && encoderTicks >= (-n*1)) {
+	            motorFrontRight.set(-0.21);
+	            motorBackRight.set(-0.21);
+	            motorFrontLeft.set(0.21);
+	            motorBackLeft.set(0.21);
+	            //state = 6;
+	            System.out.println("closedLoopForward:  Section 6");
+	        }
+	        else  {
+	            motorFrontRight.set(-0.0);
+	            motorBackRight.set(-0.0);
+	            motorFrontLeft.set(0.0);
+	            motorBackLeft.set(0.0);
+	            result = 1;
+	            System.out.println("bad");
+	            //state = 7;
+	            System.out.println("closedLoopForward:  Section 7");
+	        }//**************************************************
+	    	/*
+	        else if (encoderTicks < (n*-.94) && encoderTicks > (n*-1)) {
+	            motorFrontRight.set(-0.13);
+	            motorBackRight.set(-0.13);
+	            motorFrontLeft.set(0.13);
+	            motorBackLeft.set(0.13);
+	            //state = 8;
+	            System.out.println("closedLoopForward:  Section 8");
+	        }
+	        else if (encoderTicks <= (n*-1)) {
+	            motorFrontRight.set(-0);
+	            motorBackRight.set(-0);
+	            motorFrontLeft.set(0);
+	            motorBackLeft.set(0);
+	            //state = 9;
+	            result = 1;
+	            System.out.println("closedLoopForward:  Section 9");
+	        	}*/
+    	}
+    	else //**********************************************************************************
+    	{
+    		if (encoderTicks < ( 250)) {
+	            motorFrontRight.set(0.3);
+	            motorBackRight.set(0.3);
+	            motorFrontLeft.set(-0.3);
+	            motorBackLeft.set(-0.3);
+	            System.out.println("state = 1");
+	            System.out.println("closedLoopForward:  Section 1");
+	        }
+	        else if (encoderTicks >= ( 250) && encoderTicks <= (900)) {
+	            motorFrontRight.set(0.5);
+	            motorBackRight.set(0.5);
+	            motorFrontLeft.set(-0.5);
+	            motorBackLeft.set(-0.5);
+	            System.out.println("state = 2");
+
+	            System.out.println("closedLoopForward:  Section 2");
+	        }
+	        else if (encoderTicks >= ( 900) && encoderTicks <= (2100)) {
+	            motorFrontRight.set(0.8);
+	            motorBackRight.set(0.8);
+	            motorFrontLeft.set(-0.8);
+	            motorBackLeft.set(-0.8);
+	            //state = 3;
+	            System.out.println("state = 3");
+
+	            System.out.println("closedLoopForward:  Section 3");
+	        }
+	        else if (encoderTicks >= (2100) && encoderTicks <= (-n* 0.75)) {
+	            motorFrontRight.set(1.0);
+	            motorBackRight.set(1.0);
+	            motorFrontLeft.set(-1.0);
+	            motorBackLeft.set(-1.0);
+	            //state = 4;
+	            System.out.println("state = 4");
+
+	            System.out.println("closedLoopForward:  Section 4");
+	        }
+	        else if (encoderTicks >= (-n* 0.75) && encoderTicks <= (-n+750)) {
+	            motorFrontRight.set(0.62);
+	            motorBackRight.set(0.62);
+	            motorFrontLeft.set(-0.62);
+	            motorBackLeft.set(-0.62);
+	            //state = 5;
+	            System.out.println("closedLoopForward:  Section 5");
+	        }
+	        else if (encoderTicks >= (-n+750) && encoderTicks <= (-n+5)) {
+	            motorFrontRight.set(0.21);
+	            motorBackRight.set(0.21);
+	            motorFrontLeft.set(-0.21);
+	            motorBackLeft.set(-0.21);
+	            System.out.println("DISABLE IMMEDIATLY");
+	            System.out.println("closedLoopForward:  Section 6");
+	        }
+	        else if (encoderTicks >= -n+5)
+	        {
+	            motorFrontRight.set(-0.0);
+	            motorBackRight.set(-0.0);
+	            motorFrontLeft.set(0.0);
+	            motorBackLeft.set(0.0);
+	            result = 1;
+	            System.out.println("bad2");
+	            //state = 7;
+	            System.out.println("closedLoopForward:  Section 7");
+	        }/////////////////////////////////////////////////////////////////////aregarhfswhr
+	        /*else if (encoderTicks < (n*-.94) && encoderTicks > (n*-1)) {
+	            motorFrontRight.set(-0.13);
+	            motorBackRight.set(-0.13);
+	            motorFrontLeft.set(0.13);
+	            motorBackLeft.set(0.13);
+	            //state = 8;
+	            System.out.println("closedLoopForward:  Section 8");
+	        }
+	        else if (encoderTicks <= (n*-1)) {
+	            motorFrontRight.set(-0);
+	            motorBackRight.set(-0);
+	            motorFrontLeft.set(0);
+	            motorBackLeft.set(0);
+	            //state = 9;
+	            result = 1;
+	            System.out.println("closedLoopForward:  Section 9");
+	        	}
+    		
+    		*/
+    		
+    	}
+	    	return result;
     }
     
     //***************************************************************************************************************************
@@ -496,7 +590,7 @@ public class Robot extends IterativeRobot {
     	// PULL ENCDRIVER DISTANCES
     	encLeftDriveDistance = encLeftDrive.getDistance();
         encLeftDriveDistance = encRightDrive.getDistance();
-        
+        encoderTicks = encLeftDrive.get();
         //TURRET PID CONTOLLER
       	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
         turretTicks = turretMotor.getEncPosition();
@@ -535,15 +629,17 @@ public class Robot extends IterativeRobot {
 
     	// YAW
     	nvYaw = navx.getAngle();
-
     	//RESET NAVX BUTTON
-    	if (rightBTN7)
+    	if (rightBTN8)
     	{
+    		System.out.println("heyyy");
+    		encLeftDrive.reset();
+    		encRightDrive.reset();
     		navx.reset();
     	}
 
         //TESTING STATE FORMAT
-        System.out.println(encLeftDrive.get());
+        System.out.println(encoderTicks);
         System.out.println("OUTPUT" + motorPID.get());
         System.out.println("State = " + state);
         System.out.println("           ");
@@ -559,9 +655,19 @@ public class Robot extends IterativeRobot {
         	state = 0;
     	}
 
+        System.out.println(rightBTN10);
         if (rightBTN10)
         {
-        	if(state == 0)
+        	if (encLeftDrive.get() < 10000)
+        	{
+        		System.out.println("BTN 10");
+        	
+
+        	closedLoopForward(-10000);
+        	System.out.println("Closed Loop has suceeded");
+        	}
+        }
+        	/*if(state == 0)
 			{
         		//negative forward
         		if(closedLoopForward(9000) == 1)
@@ -692,14 +798,14 @@ public class Robot extends IterativeRobot {
         	        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
         	        }
         	      }
-        	      */
+        	      *//*
         		state = 10;
         	}
         	else if (state == 10)
         	{
         		
-        	}
-        }
+        	}*/
+    
         else
         {
         	motorFrontRight.set(jsRightAxisY);
