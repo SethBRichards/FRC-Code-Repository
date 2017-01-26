@@ -1,10 +1,3 @@
-# LUNASTOSHIBA
-toshiba
-eh bruda shootz cuz ehat be da kine up in this valley, yeah bruda cuz auntie shootz kine?
+# NEW CHASSIS BOT REV. 1
 
-
-IM ADDING SOMETHING TO THE README THANK U
-
-shootsbra-diololol
-
-nerw
+this was a work around for the new robot layout -- probably not done
