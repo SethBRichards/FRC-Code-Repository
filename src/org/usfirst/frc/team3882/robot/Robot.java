@@ -1,7 +1,14 @@
 package org.usfirst.frc.team3882.robot;
 
+import org.opencv.core.Mat;
+import org.opencv.imgproc.Imgproc;
+
 import com.ctre.CANTalon;
 
+import edu.wpi.cscore.CvSink;
+import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.Encoder;
@@ -30,7 +37,7 @@ import com.kauailabs.navx.frc.Quaternion;
  * directory.
  */
 public class Robot extends IterativeRobot {
-   //shootz bruda kine auntie howzit lolo taht broke da mout yeah?
+
 	final String defaultAuto = "Default";
     final String customAuto = "My Auto";
     String autoSelected;
@@ -42,11 +49,13 @@ public class Robot extends IterativeRobot {
     Talon intakeMotor;
     CANTalon shooterMotor, turretMotor;
     Encoder encLeftDrive, encRightDrive;
-    PIDController turretPID;
-    GenericPidOutput turretMotor_pidOutput;
-    GenericPidSource turretMotor_pidSource;
+    PIDController turretPID, motorPID;
+    GenericPidOutput turretMotor_pidOutput, drive_pidOutput;
+    GenericPidSource turretMotor_pidSource, drive_pidSource;
     AHRS navx;
     NetworkTable table;
+    
+    
 
     //JAGUARS
     final int pwm1 = 1; // left front motor
@@ -111,6 +120,8 @@ public class Robot extends IterativeRobot {
     //AUTONOMOUS VALUES
     double nvYaw;
     int state;
+    
+    double encoderTicks;
 
     /**
      * This function is run when the robot is first started up and should be
@@ -118,10 +129,32 @@ public class Robot extends IterativeRobot {
      */
     public void robotInit() {
         chooser = new SendableChooser();
-        chooser.addDefault("Default Auto", defaultAuto);
-        chooser.addObject("My Auto", customAuto);
+        chooser.addDefault("Auto1", 1);
+        chooser.addObject("Auto2", 2);
+        chooser.addObject("Auto3", 3);
         SmartDashboard.putData("Auto choices", chooser);
-
+        UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+        
+        
+        
+        /*
+        new Thread(() -> {
+            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+            camera.setResolution(640, 480);
+            
+            CvSink cvSink = CameraServer.getInstance().getVideo();
+            CvSource outputStream = CameraServer.getInstance().putVideo("Blur", 640, 480);
+            
+            Mat source = new Mat();
+            Mat output = new Mat();
+            
+            while(!Thread.interrupted()) {
+                cvSink.grabFrame(source);
+                Imgproc.cvtColor(source, output, Imgproc.COLOR_BGR2GRAY);
+                outputStream.putFrame(output);
+            }
+        }).start();
+        	*/
         /*
          * Testing using RoboRealm
          * Code generates a horizontal position (0 to 320 pixels) of the center of the
@@ -156,12 +189,17 @@ public class Robot extends IterativeRobot {
 
         turretPID.setPercentTolerance(5.0);
         turretPID.enable();
+        
+        
 
         table = NetworkTable.getTable("dataTable");
 
         //AUTONOMOUS INUT
         navx = new AHRS(SPI.Port.kMXP);
         state = 0;
+        
+        
+        
         /*
         new Thread(() -> {
             UsbCamera camera = CameraServer.getInstance().startAutomaticCapture("cam1", 0);
@@ -192,7 +230,7 @@ public class Robot extends IterativeRobot {
         //COMPRESSOR
         compressor = new Compressor();
         compressor.start();
-        // compressor.stop();
+        compressor.stop();
 
         //SHIFTERS
         pistonShift = new DoubleSolenoid(pcm0, pcm1);
@@ -208,6 +246,14 @@ public class Robot extends IterativeRobot {
         //ENCODER CHANNELS
         encLeftDrive = new Encoder(0,1);
         encRightDrive = new Encoder(2,3);
+        
+        drive_pidOutput = new GenericPidOutput();
+        motorPID = new PIDController(0.00032, 0.0, 0.0032, encLeftDrive, turretMotor_pidOutput);
+        motorPID.setSetpoint(-10000);
+        motorPID.setInputRange(-12000, 12000);
+        motorPID.setOutputRange(-1.0, 1.0);
+        motorPID.setPercentTolerance(5.0);
+        motorPID.enable();
 
         //INITIALIZE BUTTONS FALSE
         leftBTN = false;
@@ -238,9 +284,9 @@ public class Robot extends IterativeRobot {
         turretTicks = centerTick;
         targetAquired = 0;
         targetCenterDistance = 0;
+    	encoderTicks = encLeftDrive.get();
 
-        encLeftDriveDistance = encLeftDrive.getDistance();
-        encLeftDriveDistance = encRightDrive.getDistance();
+        
 
 
         //turretSpeed = turretMotor.set();
@@ -290,8 +336,8 @@ public class Robot extends IterativeRobot {
      */
     public void autonomousInit() {
         autoSelected = (String) chooser.getSelected();
-//        autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
-        System.out.println("Auto selected: " + autoSelected);
+        //autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
+        //System.out.println("Auto selected: " + autoSelected);
 
     }
 
@@ -299,15 +345,30 @@ public class Robot extends IterativeRobot {
      * This function is called periodically during autonomous
      */
     public void autonomousPeriodic() {
-        switch(autoSelected) {
-        case customAuto:
+        switch(autoSelected) 
+        {
+        case "1":
+        {
+        	auto1();
         //Put custom auto code here
             break;
-        case defaultAuto:
+        }
+        case "2":
+        {
+        	auto2();
+        	break;
+        }
+        case "3":
+        {
+        	auto3();
+        	break;
+        }
         default:
+        {
         //Put default auto code here
 
             break;
+        }
         }
     }
 
@@ -320,10 +381,10 @@ public class Robot extends IterativeRobot {
     	{
     		if(encLeftDriveDistance >  x  )
     		{
-    			motorFrontRight.set(-0.3);
-    			motorBackRight.set(-0.3);
-    			motorFrontLeft.set(0.3);
-    			motorBackLeft.set(0.3);
+    			motorFrontRight.set(-0.6);
+    			motorBackRight.set(-0.6);
+    			motorFrontLeft.set(0.6);
+    			motorBackLeft.set(0.6);
     		}
     		else
     		{
@@ -335,10 +396,10 @@ public class Robot extends IterativeRobot {
     	{
     		if(encLeftDriveDistance <  x  )
     		{
-    			motorFrontRight.set(0.3);
-    			motorBackRight.set(0.3);
-    			motorFrontLeft.set(-0.3);
-    			motorBackLeft.set(-0.3);
+    			motorFrontRight.set(0.6);
+    			motorBackRight.set(0.6);
+    			motorFrontLeft.set(-0.6);
+    			motorBackLeft.set(-0.6);
     		}
     		else
     		{
@@ -360,10 +421,10 @@ public class Robot extends IterativeRobot {
 
 	    	if(nvYaw > c)
 			{
-				motorFrontRight.set(0.3);
-				motorBackRight.set(0.3);
-				motorFrontLeft.set(0.3);
-				motorBackLeft.set(0.3);
+				motorFrontRight.set(0.35);
+				motorBackRight.set(0.35);
+				motorFrontLeft.set(0.35);
+				motorBackLeft.set(0.35);
 			}
 			else
 			{
@@ -375,10 +436,10 @@ public class Robot extends IterativeRobot {
 		{
 			if(nvYaw < c)
 			{
-				motorFrontRight.set(-0.3);
-				motorBackRight.set(-0.3);
-				motorFrontLeft.set(-0.3);
-				motorBackLeft.set(-0.3);
+				motorFrontRight.set(-0.35);
+				motorBackRight.set(-0.35);
+				motorFrontLeft.set(-0.35);
+				motorBackLeft.set(-0.35);
 			}
 			else
 			{
@@ -388,6 +449,89 @@ public class Robot extends IterativeRobot {
 		}
     	return result;
     }
+    public int closedLoopForward(double n) {
+    	int result = 0;
+    	encoderTicks = encLeftDrive.get();
+    	//System.out.println("Initial Calculation" +(n * -.05));
+    	
+    	System.out.println("closedLoopForward: CALLED");
+    	
+    	if (encoderTicks > (n * -.05)) {
+            motorFrontRight.set(-0.4);
+            motorBackRight.set(-0.4);
+            motorFrontLeft.set(0.4);
+            motorBackLeft.set(0.4);
+            //state = 1;
+            System.out.println("closedLoopForward:  Section 1");
+        }
+        else if (encoderTicks <= (n * -.05) && encoderTicks >= (n * -.1)) {
+            motorFrontRight.set(-1.0);
+            motorBackRight.set(-1.0);
+            motorFrontLeft.set(1.0);
+            motorBackLeft.set(1.0);
+            //state = 2;
+            System.out.println("closedLoopForward:  Section 2");
+        }
+        else if (encoderTicks <= (n *-.1) && encoderTicks >= (n *-.175)) {
+            motorFrontRight.set(-1.0);
+            motorBackRight.set(-1.0);
+            motorFrontLeft.set(1.0);
+            motorBackLeft.set(1.0);
+            //state = 3;
+            System.out.println("closedLoopForward:  Section 3");
+        }
+        else if (encoderTicks <= (n*-.175) && encoderTicks >= (n*-.6)) {
+            motorFrontRight.set(-1.0);
+            motorBackRight.set(-1.0);
+            motorFrontLeft.set(1.0);
+            motorBackLeft.set(1.0);
+            //state = 4;
+            System.out.println("closedLoopForward:  Section 4");
+        }
+        else if (encoderTicks <= (n*-.6) && encoderTicks >= (n*-.75)) {
+            motorFrontRight.set(-1.0);
+            motorBackRight.set(-1.0);
+            motorFrontLeft.set(1.0);
+            motorBackLeft.set(1.0);
+            //state = 5;
+            System.out.println("closedLoopForward:  Section 5");
+        }
+        else if (encoderTicks <= (n*-.75) && encoderTicks >= (n*-.85)) {
+            motorFrontRight.set(-0.62);
+            motorBackRight.set(-0.62);
+            motorFrontLeft.set(0.62);
+            motorBackLeft.set(0.62);
+            //state = 6;
+            System.out.println("closedLoopForward:  Section 6");
+        }
+        else if (encoderTicks < (n*-.85) && encoderTicks > (n*-.94)) {
+            motorFrontRight.set(-0.21);
+            motorBackRight.set(-0.21);
+            motorFrontLeft.set(0.21);
+            motorBackLeft.set(0.21);
+            //state = 7;
+            System.out.println("closedLoopForward:  Section 7");
+        }
+        else if (encoderTicks < (n*-.94) && encoderTicks > (n*-1)) {
+            motorFrontRight.set(-0.13);
+            motorBackRight.set(-0.13);
+            motorFrontLeft.set(0.13);
+            motorBackLeft.set(0.13);
+            //state = 8;
+            System.out.println("closedLoopForward:  Section 8");
+        }
+        else if (encoderTicks <= (n*-1)) {
+            motorFrontRight.set(-0);
+            motorBackRight.set(-0);
+            motorFrontLeft.set(0);
+            motorBackLeft.set(0);
+            //state = 9;
+            result = 1;
+            System.out.println("closedLoopForward:  Section 9");
+        }
+    	return result;
+    }
+    
     //***************************************************************************************************************************
     /**
      * This function is called periodically during operator control
@@ -395,12 +539,16 @@ public class Robot extends IterativeRobot {
     @SuppressWarnings("deprecation")
     public void teleopPeriodic()
     {
+    	// PULL ENCDRIVER DISTANCES
+    	encLeftDriveDistance = encLeftDrive.getDistance();
+        encLeftDriveDistance = encRightDrive.getDistance();
+        
         //TURRET PID CONTOLLER
       	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
-          turretTicks = turretMotor.getEncPosition();
+        turretTicks = turretMotor.getEncPosition();
 
-          targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
-          targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
 
         //CONTROLLERS
 
@@ -441,10 +589,15 @@ public class Robot extends IterativeRobot {
     	}
 
         //TESTING STATE FORMAT
-        System.out.println(encLeftDriveDistance);
-        System.out.println(rightBTN10);
-        System.out.println("state   " + state);
-
+        System.out.println(encLeftDrive.get());
+        System.out.println("OUTPUT" + motorPID.get());
+        System.out.println("State = " + state);
+        System.out.println("           ");
+        
+        //SmartDashboard.putString("conc", (encLeftDrive.get() + 10000) + "," + (motorPID.getAvgError()) + "," + (motorPID.getError()) + "," + (motorPID.get()));
+        // System.out.println(rightBTN10);
+        //System.out.println("state   " + state);
+        //System.out.println();
         //STATE FOR AUTONOMOUS MOTION////////////////////////////////////////////////////////////////////
         if (rightBTN11)
         {
@@ -457,7 +610,7 @@ public class Robot extends IterativeRobot {
         	if(state == 0)
 			{
         		//negative forward
-        		if(straightDirection(-9000) == 1)
+        		if(closedLoopForward(9000) == 1)
         		{
         			state = 1;
         		}
@@ -491,34 +644,53 @@ public class Robot extends IterativeRobot {
     			encRightDrive.reset();
     			state = 5;
     			//navx.reset();
+    			navx.reset();
         	}
         	else if(state == 5)
         	{
         		//negative left
-        		if(straightDirection(-6000) == 1)
+        		if(closedLoopForward(6000) == 1)
         		{
         			state = 6;
         		}
         	}
         	else if(state == 6)
         	{
+        		//navx.reset();
         		motorFrontRight.set(0);
     			motorBackRight.set(0);
     			motorFrontLeft.set(0);
     			motorBackLeft.set(0);
     			//encLeftDrive.reset();
-    			navx.reset();
+    			//navx.reset();
     			state = 7;
     			//navx.reset();
         	}
         	else if(state == 7)
         	{
         		//negative left
-        		 if (turnDirection(-45)== 1)
+        		 if (turnDirection(-90) == 1)
         		 {
         			 state = 8;
         		 }
-
+        		 
+        		 if(targetAquired == 1)
+        		 {
+        			 if (turretTicks <= 5000 && turretTicks >= -5000)
+        			 {
+        				 if(turretSpeed > 0.1 && turretSpeed < 0.2)
+        				 {
+        					 turretSpeed = 0.2;
+        				 }
+        				 else if (turretSpeed > -0.1 && turretSpeed < -0.2)
+        				 {
+        					 turretSpeed = -0.2;
+        				 }
+        				 turretMotor.set(turretSpeed);
+        				 //turretMotor.set(turretPID.get() * -1);
+        				 //turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
+        			 }
+        		 }
         	}
         	else if (state == 8)
         	{
@@ -526,25 +698,86 @@ public class Robot extends IterativeRobot {
     			motorBackRight.set(0);
     			motorFrontLeft.set(0);
     			motorBackLeft.set(0);
-        		state = 9;
-
+    			turretMotor.set(0);
+    			 if(targetAquired == 1)
+        		 {
+        			 if (turretTicks <= 5000 && turretTicks >= -5000)
+        			 {
+        				 if(turretSpeed > 0.1 && turretSpeed < 0.2)
+        				 {
+        					 turretSpeed = 0.2;
+        				 }
+        				 else if (turretSpeed > -0.1 && turretSpeed < -0.2)
+        				 {
+        					 turretSpeed = -0.2;
+        				 }
+        				 turretMotor.set(turretSpeed);
+        			 }}
         	}
         	else if (state == 9)
         	{
+        		/*
         		 if(targetAquired == 1.0)
         	        {
         	        	turretMotor_pidSource.pidInput = targetCenterDistance;
+        	        	//turretMotor.set(turretPID.get() * -1);
+        	        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
+        	        
+        		  if (turretTicks <= 5000 && turretTicks >= -5000 && leftBTN10)
+        	        {
+        	        	if(turretSpeed > 0.1 && turretSpeed < 0.2)
+        	        	{
+        	        		turretSpeed = 0.2;
+        	        	}
+        	        	else if (turretSpeed > -0.1 && turretSpeed < -0.2)
+        	        	{
+        	        		turretSpeed = -0.2;
+        	        	}
+        	        	turretMotor.set(turretSpeed);
+        	        	//turretMotor.set(turretPID.get() * -1);
+        	        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
         	        }
+        	      }
+        	      */
+        		state = 10;
+        	}
+        	else if (state == 10)
+        	{
+        		
         	}
         }
         else
-  			{
+        {
+        	motorFrontRight.set(jsRightAxisY);
+        	motorBackRight.set(jsRightAxisY);
+        	motorFrontLeft.set(jsLeftAxisY);
+        	motorBackLeft.set(jsLeftAxisY);
+        	turretMotor.set(0);
+  		}
+        
+        /*
+         // NOT THE StATES ACTUAL WORKING BUTTONS 
+        if (rightBTN9)
+        {
+        	motorFrontRight.set(-0.5);
+  		    motorBackRight.set(-0.5);
+  		    motorFrontLeft.set(0.5);
+  		    motorBackLeft.set(0.5);
+        }
+        else if(rightBTN8) {
+        	motorFrontRight.set(0.5);
+        	motorBackRight.set(0.5);
+        	motorFrontLeft.set(-0.5);
+        	motorBackLeft.set(-0.5);
+        }
+        else {
   		    motorFrontRight.set(jsRightAxisY);
-  		    motorBackRight.set(jsRightAxisY);
-  		    motorFrontLeft.set(jsLeftAxisY);
-  		    motorBackLeft.set(jsLeftAxisY);
-
-  		    }
+ 		    motorBackRight.set(jsRightAxisY);
+ 		    motorFrontLeft.set(jsLeftAxisY);
+ 		    motorBackLeft.set(jsLeftAxisY);
+		}
+		
+		*/
         ////////////////////////////////////////////////////////////////////////////////////////////////////
        //OLD CODE FOR TESTING MOTION ///////////////////////////////////////////////////////////////
 
@@ -731,11 +964,11 @@ public class Robot extends IterativeRobot {
             shooterMotor.set(0);
         }
 
-        System.out.println("JS RIGHT" + jsRightAxisY);
-        System.out.println("JS LEFT" + jsLeftAxisY);
-        System.out.println("       ");
-        System.out.println("YAW" + nvYaw);
-        System.out.println("        ");
+        //System.out.println("JS RIGHT" + jsRightAxisY);
+        //System.out.println("JS LEFT" + jsLeftAxisY);
+        //System.out.println("       ");
+        //System.out.println("YAW" + nvYaw);
+        //System.out.println("        ");
 
 
 
@@ -842,4 +1075,18 @@ public class Robot extends IterativeRobot {
             }
     }
 
+
+
+    public void auto1() {
+    	// move past baseline
+    }
+
+    public void auto2() {
+    	// gear auto
+    }
+
+    public void auto3() {
+    	// ball auto
+
+    }
 }
