@@ -1,1354 +1,1154 @@
+/*
+
+   THE MIT LICENSE
+
+   Copyright 2017 TEAM 3882 [Tad Luckey, Randy Arakawa, Jay Marie Baptista, Seth Richards, Diolo Pascual]
+
+   Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated
+   documentation files (the "Software"), to deal in the Software without restriction, including without limitation the
+   rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+   persons to whom the Software is furnished to do so, subject to the following conditions:
+
+   The above copyright notice and this permission notice shall be included in all copies or substantial portions of the
+   Software.
+
+   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+   WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR
+   COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+   OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 package org.usfirst.frc.team3882.robot;
-
-import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
-
-import com.ctre.CANTalon;
-
-import edu.wpi.cscore.CvSink;
-import edu.wpi.cscore.CvSource;
+import edu.wpi.cscore.MjpegServer;
 import edu.wpi.cscore.UsbCamera;
+import edu.wpi.cscore.VideoMode;
 import edu.wpi.first.wpilibj.CameraServer;
-import edu.wpi.first.wpilibj.Compressor;
-import edu.wpi.first.wpilibj.DoubleSolenoid;
-import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.IterativeRobot;
-import edu.wpi.first.wpilibj.Jaguar;
-import edu.wpi.first.wpilibj.Joystick;
-import edu.wpi.first.wpilibj.PIDController;
-import edu.wpi.first.wpilibj.SPI;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.PIDSourceType;
-import edu.wpi.first.wpilibj.Talon;
+import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.PIDController;
 import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.PIDSource;
-
+import edu.wpi.first.wpilibj.PIDSourceType;
+import edu.wpi.first.wpilibj.SPI;
+import com.ctre.CANTalon;
+import edu.wpi.first.wpilibj.Victor;
+import edu.wpi.first.wpilibj.PowerDistributionPanel;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.Talon;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.networktables.NetworkTable;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import com.kauailabs.navx.frc.AHRS;
-import com.kauailabs.navx.frc.Quaternion;
-/**
- * The VM is configured to automatically run this class, and to call the
- * functions corresponding to each mode, as described in the IterativeRobot
- * documentation. If you change the name of this class or the package after
- * creating this project, you must also update the manifest file in the resource
- * directory.
- */
+
 public class Robot extends IterativeRobot {
+final String defaultAuto = "Default";
+final String customAuto = "My Auto";
+Integer autoSelected;
+SendableChooser<Integer> chooser;
+Joystick jsLeft, jsRight;
+XboxController xbox;
+Compressor compressor;
+Talon rightFront, rightMid, rightBack, leftFront, leftMid, leftBack;
+Encoder encLeftDrive, encRightDrive;
+NetworkTable table;
+DoubleSolenoid driveChain, gearpiston, presser;
+CANTalon climber, shooter, intake, feeder;
+AHRS navx;
 
-	final String defaultAuto = "Default";
-    final String customAuto = "My Auto";
-    int autoSelected;
-    SendableChooser<Integer> chooser;
-    Jaguar motorFrontRight, motorFrontLeft, motorBackRight, motorBackLeft;
-    Joystick jsRight, jsLeft;
-    Compressor compressor;
-    DoubleSolenoid pistonShift, pistonIntake;
-    Talon intakeMotor;
-    CANTalon shooterMotor, turretMotor;
-    Encoder encLeftDrive, encRightDrive;
-    PIDController turretPID, motorPID;
-    GenericPidOutput turretMotor_pidOutput, drive_pidOutput;
-    GenericPidSource turretMotor_pidSource, drive_pidSource;
-    AHRS navx;
-    NetworkTable table;
-    CameraServer coproc;
-    
-    
+//JOYSTICKS
 
-    //JAGUARS
-    final int pwm1 = 1; // left front motor
-    final int pwm2 = 2; // right front motor
-    final int pwm3 = 3; // left back motor
-    final int pwm4 = 4; // right back motor
+double rightJS, leftJS;
+double rightJSAxis, leftJSAxis;
 
-    //CONTROLLER USB PORTS
-    final int usb0 = 0; //Right
-    final int usb1 = 1; //Left
+// BUTTONS
+boolean rBTN1, rBTN2, rBTN3, rBTN4, rBTN5, lBTN1, lBTN2, lBTN3, lBTN4, lBTN5 = false;
+boolean xBTNA, xBTNB, xBTNX, xBTNY, xBTN5, xBTN4;
 
-    final int axisY = 1;
+//LATCH BOOLEANS
+boolean rBTN1_old, rBTN3_old, lBTN1_old, shootLatch, lowLatch = false;
 
-    //SOLENOIDS
-    final int pcm0 = 0;
-    final int pcm1 = 1;
-    final int pcm2 = 2;
-    final int pcm3 = 3;
+boolean xBTN5_old, xBTN4_old, xBTNA_old, xBTNY_old;
 
-    //JOYSTICK STUFF
-    boolean rightBTN;
-    boolean rightBTN2;
-    boolean rightBTN3;
-    boolean rightBTN4;
-    boolean rightBTN5;
-    boolean rightBTN6;
-    boolean rightBTN7;
-    boolean rightBTN8;
-    boolean rightBTN9;
-    boolean rightBTN10;
-    boolean rightBTN11;
+// PNEUMATIC CONTROLLER MODULE
+final int pcm0 = 0;
 
-    boolean leftBTN;
-    boolean leftBTN1;
-    boolean leftBTN2;
-    boolean leftBTN3;
-    boolean leftBTN4;
-    boolean leftBTN5;
-    boolean leftBTN6;
-    boolean leftBTN7;
-    boolean leftBTN8;
-    boolean leftBTN9;
-    boolean leftBTN10;
-    boolean leftBTN11;
+// PULSE WIDTH MODS
+final int pwm0 = 0;
+final int pwm1 = 1;
+final int pwm2 = 2;
+final int pwm3 = 3;
+final int pwm4 = 4;
+final int pwm5 = 5;
 
-    double jsLeftAxisY;
-    double jsRightAxisY;
+//STATE MACHINE VARIABLES
+double encLeftDriveDistance;
+double nvYaw;
+int state;
 
-    //PIDCONTROLLER STUFF
-    int turretTicks;
-    int centerTick;
-    double targetAquired;
-    double targetCenterDistance;
+//AUTONOMOUS
+double targetAquired;
+double targetCenterDistance;
 
-    //unused
-    boolean autoEnable;
-    double turretSpeed;
+Victor secondShooterMotor;
+PowerDistributionPanel pdp;
+int condition;
 
-    //ENCODERS
-    double encLeftDriveDistance;
-    double encRightDriveDistance;
+final int usb0 = 0;
+double motorPower = 0.0;
+double talon2 = 0.0;
+double talon1 = 0.0;
+double shooterRPM = 0.0;
 
-    //AUTONOMOUS VALUES
-    double nvYaw;
-    int state;
-    
-    double encoderTicks;
+final int conversionFactor = (1080);
 
-    /**
-     * This function is run when the robot is first started up and should be
-     * used for any initialization code.
-     */
-    public void robotInit() {
+@Override
+public void robotInit() {
+
         chooser = new SendableChooser<Integer>();
-        chooser.addDefault("Auto1", 1);
-        chooser.addObject("Auto2", 2);
-        chooser.addObject("Auto3", 3);
+        chooser.addDefault("center red", 1);
+        chooser.addObject("center blue", 2);
+        chooser.addObject("boiler red", 3);
+        chooser.addObject("boiler blue", 4);
+        chooser.addObject("ret red", 5);
+        chooser.addObject("ret blue", 6);
+        chooser.addObject("current test", 7);
+
         SmartDashboard.putData("Auto choices", chooser);
-        //UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
 
-        /*
-        new Thread(() -> {
-            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
-            camera.setResolution(640, 480);
-            
-            CvSink cvSink = CameraServer.getInstance().getVideo();
-            CvSource outputStream = CameraServer.getInstance().putVideo("Blur", 640, 480);
-            
-            Mat source = new Mat();
-            Mat output = new Mat();
-            
-            while(!Thread.interrupted()) {
-                cvSink.grabFrame(source);
-                Imgproc.cvtColor(source, output, Imgproc.COLOR_BGR2GRAY);
-                outputStream.putFrame(output);
-            }
-        }).start();
-        	*/
-        /*
-         * Testing using RoboRealm
-         * Code generates a horizontal position (0 to 320 pixels) of the center of the
-         * target to the center of the camera image.
-         *
-         * Math: (x = pixels, y = motor speed)
-         * x1 = 0,   y1 = -1.0
-         * x2 = 360, y2 = +1.0
-         *
-         * m = 0.000625
-         * b = -1.0
-         *
-         * Alternatively, RoboRealm could be changed such that the center value is zero and
-         * returns a value between -160 and +160 pixels
-         *
-         * x1 = -160,   y1 = -1.0
-         * x2 = +160,   y2 = +1.0
-         *
-         * m = 0.000625
-         * b = 0.0
-         *
-         */
-
-        //TURRET PID CONTROLLER
-        turretMotor_pidOutput = new GenericPidOutput();
-        turretMotor_pidSource = new GenericPidSource();
-        turretPID = new PIDController(0.00625, 0.0, 0.0, turretMotor_pidSource, turretMotor_pidOutput);
-
-        turretPID.setSetpoint(0.0);
-        turretPID.setInputRange(-160.0, 160.0);
-        turretPID.setOutputRange(-1.0, 1.0);
-
-        turretPID.setPercentTolerance(5.0);
-        turretPID.enable();
-        
-        
-
+        //NETWORK TABLE VARIABLES
         table = NetworkTable.getTable("dataTable");
 
-        //AUTONOMOUS INUT
+        //POWER DIST PANEL
+        pdp = new PowerDistributionPanel();
+
+        //NAVX
         navx = new AHRS(SPI.Port.kMXP);
-        state = 0;
-        
-        
-        
-        /*
-        new Thread(() -> {
-            UsbCamera camera = CameraServer.getInstance().startAutomaticCapture("cam1", 0);
-            camera.setResolution(320, 240);
-        }).start();
-        */
 
+        // CONTROLLER
+        jsLeft = new Joystick(0);
+        jsRight = new Joystick(1);
+        xbox = new XboxController(5);
 
+        // MOTORS
+        leftFront = new Talon(pwm5);
+        leftMid = new Talon(pwm3);
+        leftBack = new Talon(pwm1);
+        rightFront = new Talon(pwm4);
+        rightMid = new Talon(pwm2);
+        rightBack = new Talon(pwm0);
 
-
-        //enable
-        //disable
-        //setInputRange
-        //setOutputRange
-        //setPercentTolerance
-        //setSetpoint (target)
-
-        //JAGUAR MOTORS
-        motorFrontRight = new Jaguar(pwm1);
-        motorFrontLeft = new Jaguar(pwm2);
-        motorBackRight = new Jaguar(pwm3);
-        motorBackLeft = new Jaguar(pwm4);
-
-        //JOYSTICKS
-        jsRight = new Joystick(usb1);
-        jsLeft = new Joystick(usb0);
-
-        //COMPRESSOR
-        compressor = new Compressor();
-        compressor.start();
-        compressor.stop();
-
-        //SHIFTERS
-        pistonShift = new DoubleSolenoid(pcm0, pcm1);
-        pistonShift.set(DoubleSolenoid.Value.kReverse);
-        pistonIntake = new DoubleSolenoid(pcm2, pcm3);
-        pistonIntake.set(DoubleSolenoid.Value.kReverse);
-
-        //TALON CHANNELS
-        intakeMotor = new Talon(0);
-        turretMotor = new CANTalon(0);
-        shooterMotor = new CANTalon(5);
-
-        //ENCODER CHANNELS
+        // ENCODERS
         encLeftDrive = new Encoder(0,1);
         encRightDrive = new Encoder(2,3);
-        
-        drive_pidOutput = new GenericPidOutput();
-        motorPID = new PIDController(0.00032, 0.0, 0.0032, encLeftDrive, turretMotor_pidOutput);
-        motorPID.setSetpoint(-10000);
-        motorPID.setInputRange(-12000, 12000);
-        motorPID.setOutputRange(-1.0, 1.0);
-        motorPID.setPercentTolerance(5.0);
-        motorPID.enable();
 
-        //INITIALIZE BUTTONS FALSE
-        leftBTN = false;
-        leftBTN2 = false;
-        leftBTN3 = false;
-        leftBTN4 = false;
-        leftBTN5 = false;
-        leftBTN6 = false;
-        leftBTN7 = false;
-        leftBTN8 = false;
-        leftBTN9 = false;
-        leftBTN10 = false;
-        leftBTN11 = false;
+        // COMPRESSOR
+        compressor = new Compressor();
+        compressor.start();
 
-        rightBTN = false;
-        rightBTN2 = false;
-        rightBTN3 = false;
-        rightBTN4 = false;
-        rightBTN5 = false;
-        rightBTN6 = false;
-        rightBTN7 = false;
-        rightBTN8 = false;
-        rightBTN9 = false;
-        rightBTN10 = false;
-
-        autoEnable = false;
-
-        centerTick = turretMotor.getEncPosition();
-        turretTicks = centerTick;
-        targetAquired = 0;
-        targetCenterDistance = 0;
-    	encoderTicks = encLeftDrive.get();
-
-        
+        //SOLENOIDs
+        driveChain = new DoubleSolenoid(0,1);
+        driveChain.set(Value.kReverse);
+        presser = new DoubleSolenoid(2,3);
+        presser.set(Value.kReverse);
+        gearpiston = new DoubleSolenoid(4,5);
+        gearpiston.set(Value.kReverse);
 
 
-        //turretSpeed = turretMotor.set();
+        //CANTALONS
+        climber = new CANTalon(2);
+        shooter = new CANTalon(4);
+        intake = new CANTalon(9);
+        feeder = new CANTalon(13);
 
-        //
-        //CameraServer.getInstance().startAutomaticCapture();
+        // CAMERA
+        UsbCamera usbCam = new UsbCamera("mscam", 0);
+        usbCam.setVideoMode(VideoMode.PixelFormat.kMJPEG, 160, 120, 20);
+        MjpegServer server1 = new MjpegServer("cam1", 1181);
+        server1.setSource(usbCam);
+}
 
-        //camera = new AxisCamera("axis-camera","169.254.227.145");
-
-        //serv1.addAxisCamera("axis-camera", "169.254.227.145");
-        //AxisCamera camera = CameraServer.getInstance().addAxisCamera("10.38.82.13");
-        //camera.setResolution(640, 480);
-
-        //camera = CameraServer.getInstance().startAutomaticCapture("cam1", 0);
-        //camera.setVideoMode(VideoMode.PixelFormat.kBGR, 320, 240, 4);
-        //System.out.println("USB Camera Handle =  " + camera.getHandle());
-
-        /*
-         new Thread(() -> {
-             UsbCamera camera = CameraServer.getInstance().startAutomaticCapture("cam1", 0);
-             camera.setResolution(640, 520);
-             camera.setFPS(4);
-
-             CvSink cvSink = CameraServer.getInstance().getVideo();
-             CvSource outputStream = CameraServer.getInstance().putVideo("Blur", 640, 520);
-
-             Mat source = new Mat();
-             Mat output = new Mat();
-
-             while(true) {
-                 cvSink.grabFrame(source);
-                 Imgproc.cvtColor(source, output, Imgproc.COLOR_BGR2GRAY);
-                 outputStream.putFrame(output);
-             }
-         }).start();
-       */
-    }
-
-    /**
-     * This autonomous (along with the chooser code above) shows how to select between different autonomous modes
-     * using the dashboard. The sendable chooser code works with the Java SmartDashboard. If you prefer the LabVIEW
-     * Dashboard, remove all of the chooser code and uncomment the getString line to get the auto name from the text box
-     * below the Gyro
-     *
-     * You can add additional auto modes by adding additional comparisons to the switch structure below with additional strings.
-     * If using the SendableChooser make sure to add them to the chooser code above as well.
-     */
-    public void autonomousInit() {
+@Override
+public void autonomousInit() {
         autoSelected = chooser.getSelected();
-        //autoSelected = SmartDashboard.getString("Auto Selector", defaultAuto);
         System.out.println("Auto selected: " + autoSelected);
         state = 0;
-    }
+        condition = 0;
+        encLeftDrive.reset();
+        navx.reset();
+}
+@Override
+public void autonomousPeriodic() {
+        encLeftDriveDistance = encLeftDrive.get();
+        nvYaw = navx.getAngle();
 
-    /**
-     * This function is called periodically during autonomous
-     */
-    public void autonomousPeriodic() 
-    {
-    	encLeftDriveDistance = encLeftDrive.get();
-    	nvYaw = navx.getAngle();
+        talon1 = pdp.getCurrent(1);
+        SmartDashboard.putNumber("CURRENT2_T1", talon1);
 
-    	System.out.println("Auto Running: Ticks = " + encLeftDriveDistance);
-        switch(autoSelected) 
+        System.out.println("Auto Running: Ticks = " + encLeftDriveDistance);
+        switch(autoSelected)
         {
-	        case 1:
-	        {
-	        	auto1();
-	        //Put custom auto code here
-	            break;
-	        }
-	        case 2:
-	        {
-	        	auto2();
-	        	break;
-	        }
-	        case 3:
-	        {
-	        	auto3();
-	        	break;
-	        }
-	        default:
-	        {
-	        //Put default auto code here
-	
-	            break;
-	        }
+        case 1:
+        {
+                centreRed();
+                break;
         }
-    }
-    
+        case 2:
+        {
+                centreBlue();
+                break;
+        }
+        case 3:
+        {
+                boilerRed();
+                break;
+        }
+        case 4:
+        {
+                boilerBlue();
+                break;
+        }
+        case 5:
+        {
+                retRed();
+                break;
+        }
+        case 6:
+        {
+                retBlue();
+                break;
+        }
+        case 7:
+        {
+                testAutonomous();
+                break;
+        }
 
-    //AUTONOMOUS MOTION FORWARD(NEGATIVE) AND BACKWARD(POSITIVE)--------------------------------------------------------------
-    public int straightDirection(double x)
-    {
-    	int result = 0;
 
-    	if (x < 0)
-    	{
-    		if(encLeftDriveDistance >  x  )
-    		{
-    			motorFrontRight.set(-0.4);
-    			motorBackRight.set(-0.4);
-    			motorFrontLeft.set(0.4);
-    			motorBackLeft.set(0.4);
-    		}
-    		else
-    		{
-    			result = 1;
-    			System.out.println("Else Statement For Encoder Firing");
-    		}
-    	}
-    	else
-    	{
-    		if(encLeftDriveDistance <  x  )
-    		{
-    			motorFrontRight.set(0.4);
-    			motorBackRight.set(0.4);
-    			motorFrontLeft.set(-0.4);
-    			motorBackLeft.set(-0.4);
-    		}
-    		else
-    		{
-    			result = 1;
-    			System.out.println("Else Statement For Encoder Firing");
-    		}
-    	}
+        default:
+        {
+                //Put default auto code here
 
-    	return result;
-	}
-    //--------------------------------------------------------------------------------------------------------------------------
+                break;
+        }
+        }
+}
 
-    //AUTONOMOUS MOTION TURNING(Negative Left, Positive Right)*****************************************************************8
-    public int turnDirection(double c)
-    {
-    	int result = 0;
-    	if (c < 0)
-		{
 
-	    	if(nvYaw > c)
-			{
-				motorFrontRight.set(0.35);
-				motorBackRight.set(0.35);
-				motorFrontLeft.set(0.35);
-				motorBackLeft.set(0.35);
-			}
-			else
-			{
-				result = 1;
-
-			}
-    	}
-		else
-		{
-			if(nvYaw < c)
-			{
-				motorFrontRight.set(-0.35);
-				motorBackRight.set(-0.35);
-				motorFrontLeft.set(-0.35);
-				motorBackLeft.set(-0.35);
-			}
-			else
-			{
-				result = 1;
-				//state = 4;
-			}
-		}
-    	return result;
-    }
-    public int closedLoopForward(double n) {
-    	int result = 0;
-    	encoderTicks = encLeftDrive.get();
-    	//System.out.println("Initial Calculation" +(n * -.05));
-    	
-    	System.out.println("closedLoopForward: CALLED");
-    	
-    	if (encoderTicks > (n * -.05)) {
-            motorFrontRight.set(-0.4);
-            motorBackRight.set(-0.4);
-            motorFrontLeft.set(0.4);
-            motorBackLeft.set(0.4);
-            //state = 1;
-            System.out.println("closedLoopForward:  Section 1");
-        }
-        else if (encoderTicks <= (n * -.05) && encoderTicks >= (n * -.1)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 2;
-            System.out.println("closedLoopForward:  Section 2");
-        }
-        else if (encoderTicks <= (n *-.1) && encoderTicks >= (n *-.175)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 3;
-            System.out.println("closedLoopForward:  Section 3");
-        }
-        else if (encoderTicks <= (n*-.175) && encoderTicks >= (n*-.6)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 4;
-            System.out.println("closedLoopForward:  Section 4");
-        }
-        else if (encoderTicks <= (n*-.6) && encoderTicks >= (n*-.75)) {
-            motorFrontRight.set(-1.0);
-            motorBackRight.set(-1.0);
-            motorFrontLeft.set(1.0);
-            motorBackLeft.set(1.0);
-            //state = 5;
-            System.out.println("closedLoopForward:  Section 5");
-        }
-        else if (encoderTicks <= (n*-.75) && encoderTicks >= (n*-.85)) {
-            motorFrontRight.set(-0.62);
-            motorBackRight.set(-0.62);
-            motorFrontLeft.set(0.62);
-            motorBackLeft.set(0.62);
-            //state = 6;
-            System.out.println("closedLoopForward:  Section 6");
-        }
-        else if (encoderTicks < (n*-.85) && encoderTicks > (n*-.94)) {
-            motorFrontRight.set(-0.21);
-            motorBackRight.set(-0.21);
-            motorFrontLeft.set(0.21);
-            motorBackLeft.set(0.21);
-            //state = 7;
-            System.out.println("closedLoopForward:  Section 7");
-        }
-        else if (encoderTicks < (n*-.94) && encoderTicks > (n*-1)) {
-            motorFrontRight.set(-0.13);
-            motorBackRight.set(-0.13);
-            motorFrontLeft.set(0.13);
-            motorBackLeft.set(0.13);
-            //state = 8;
-            System.out.println("closedLoopForward:  Section 8");
-        }
-        else if (encoderTicks <= (n*-1)) {
-            motorFrontRight.set(-0);
-            motorBackRight.set(-0);
-            motorFrontLeft.set(0);
-            motorBackLeft.set(0);
-            //state = 9;
-            result = 1;
-            System.out.println("closedLoopForward:  Section 9");
-        }
-    	return result;
-    }
-    
-    
-    
-    
-    //***************************************************************************************************************************
-    /**
-     * This function is called periodically during operator control
-     */
-    @SuppressWarnings("deprecation")
-    public void teleopPeriodic()
-    {
-    	// PULL ENCDRIVER DISTANCES
-    	encLeftDriveDistance = encLeftDrive.getDistance();
-        encLeftDriveDistance = encRightDrive.getDistance();
-        
-        //TURRET PID CONTOLLER
-      	turretSpeed = turretMotor_pidOutput.pidOutput * -1;
-        turretTicks = turretMotor.getEncPosition();
-
-        targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
+@Override
+public void teleopPeriodic() {
+        //TARGETING
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        System.out.println("GOAL CENTER" + targetCenterDistance);
+        encLeftDriveDistance = encLeftDrive.get();
+        System.out.println("QUADRATURE" + encLeftDrive.get());
+        nvYaw = navx.getYaw();
 
-        //CONTROLLERS
+        // JS CONTROLS
+        rightJSAxis = -1 * jsRight.getRawAxis(1);
+        leftJSAxis = jsLeft.getRawAxis(1);
+        rBTN1 = jsRight.getRawButton(1);
+        rBTN2 = jsRight.getRawButton(2);
+        rBTN3 = jsRight.getRawButton(3);
+        rBTN4 = jsRight.getRawButton(4);
+        rBTN5 = jsRight.getRawButton(5);
+        lBTN1 = jsLeft.getRawButton(1);
+        lBTN2 = jsLeft.getRawButton(2);
+        lBTN3 = jsLeft.getRawButton(3);
+        lBTN4 = jsLeft.getRawButton(4);
+        lBTN5 = jsLeft.getRawButton(5);
+        xBTNX = xbox.getXButton();
+        xBTNY = xbox.getYButton();
+        xBTNA = xbox.getAButton();
+        xBTNB = xbox.getBButton();
+        xBTN5 = xbox.getRawButton(5);
 
-        jsRightAxisY = jsRight.getRawAxis(axisY);
-        jsLeftAxisY = -1 * jsLeft.getRawAxis(axisY);
+        //OPERATOR CONTROLS
 
-        leftBTN = jsLeft.getRawButton(1);
-        leftBTN2 = jsLeft.getRawButton(2);
-        leftBTN3 = jsLeft.getRawButton(3);
-        leftBTN4 = jsLeft.getRawButton(4);
-        leftBTN5 = jsLeft.getRawButton(5);
-        leftBTN6 = jsLeft.getRawButton(6);
-        leftBTN7 = jsLeft.getRawButton(7);
-        leftBTN8 = jsLeft.getRawButton(8);
-        leftBTN9 = jsLeft.getRawButton(9);
-        leftBTN10 = jsLeft.getRawButton(10);
-        leftBTN11 = jsLeft.getRawButton(11);
+        //PRESSER
+        if (xBTN4 == true && xBTN4_old == false) {
+          presser.set(Value.kForward);
+        }
+        else {
+          presser.set(Value.kReverse);
+        }
+        xBTN4_old = xBTN4;
 
-        rightBTN = jsRight.getRawButton(1);
-        rightBTN2 = jsRight.getRawButton(2);
-        rightBTN3 = jsRight.getRawButton(3);
-        rightBTN4 = jsRight.getRawButton(4);
-        rightBTN5 = jsRight.getRawButton(5);
-        rightBTN6 = jsRight.getRawButton(6);
-        rightBTN7 = jsRight.getRawButton(7);
-        rightBTN8 = jsRight.getRawButton(8);
-        rightBTN9 = jsRight.getRawButton(9);
-        rightBTN10 = jsRight.getRawButton(10);
-        rightBTN11 = jsRight.getRawButton(11);
+        //REDUCER
+        if (xBTN5 == true && xBTN5_old == false) {
+                lowLatch = !lowLatch;
+        }
+        xBTN5_old = xBTN5;
 
-    	// YAW
-    	nvYaw = navx.getAngle();
+        //SHOOTER SPEED CHANGER
+        if (xBTNY && !xBTNY_old) {
+          motorPower = motorPower + 0.05;
+        }
+        else if (xBTNA && !xBTNA_old) {
+          motorPower = motorPower - 0.05;
+        }
+        else if (xBTNB){
+          motorPower = -0.8;
+        }
+        else if (xBTNX) {
+          motorPower = 0.0;
+        }
 
-    	//RESET NAVX BUTTON
-    	if (rightBTN7)
-    	{
-    		navx.reset();
-    	}
+        shooter.set(motorPower);
 
-        //TESTING STATE FORMAT
-        System.out.println(encLeftDrive.get());
-        System.out.println("OUTPUT" + motorPID.get());
-        System.out.println("State = " + state);
-        System.out.println("           ");
+        //PILOT CONTROLS
+
+        //ALIGNER
+        if (rBTN2) {
+                if(targetAquired == 1.0)
+                {
+                        if (targetCenterDistance > 15)
+                        {
+                                leftFront.set(0.25);
+                                leftMid.set(0.25);
+                                leftBack.set(0.25);
+                                rightFront.set(0.25);
+                                rightMid.set(0.25);
+                                rightBack.set(0.25);
+                        }
+                        else if (targetCenterDistance < -15)
+                        {
+                                leftFront.set(-0.25);
+                                leftMid.set(-0.25);
+                                leftBack.set(-0.25);
+                                rightFront.set(-0.25);
+                                rightMid.set(-0.25);
+                                rightBack.set(-0.25);
+                        }
+
+                }
+        }
+        // REDUCTION CHAIN
+        else if (lowLatch) {
+                leftFront.set(leftJSAxis * .85);
+                leftMid.set(leftJSAxis * .85);
+                leftBack.set(leftJSAxis * .85);
+                rightFront.set(rightJSAxis * .85);
+                rightMid.set(rightJSAxis * .85);
+                rightBack.set(rightJSAxis * .85);
+        }
+        // DEFAULT TO JOYSTICKS
+        else {
+                leftFront.set(leftJSAxis);
+                leftMid.set(leftJSAxis);
+                leftBack.set(leftJSAxis);
+                rightFront.set(rightJSAxis);
+                rightMid.set(rightJSAxis);
+                rightBack.set(rightJSAxis);
+        }
+
+        //INTAKE IN LATCHED
+        if (rBTN4) {
+        	intake.set(0.7);
+        }
         
-        //SmartDashboard.putString("conc", (encLeftDrive.get() + 10000) + "," + (motorPID.getAvgError()) + "," + (motorPID.getError()) + "," + (motorPID.get()));
-        // System.out.println(rightBTN10);
-        //System.out.println("state   " + state);
-        //System.out.println();
-        //STATE FOR AUTONOMOUS MOTION////////////////////////////////////////////////////////////////////
-        if (rightBTN11)
+        //INTAKE OUT LATCHED
+        if (rBTN5) {
+        	intake.set(0.0);
+        }
+
+
+        //SHIFTER LATCHED
+        if (rBTN1 == true && rBTN1_old == false)
         {
-        	encLeftDrive.reset();
-        	state = 0;
-    	}
-/*
-        if (rightBTN10)
+                if(driveChain.get() == Value.kForward)
+                {
+                        driveChain.set(Value.kReverse);
+                }
+                else
+                {
+                        driveChain.set(Value.kForward);
+                }
+        }
+        rBTN1_old = rBTN1;
+
+        //SHOOTER LATCHED
+        if (lBTN1 == true && lBTN1_old == false)
         {
-        	if(state == 0)
-			{
-        		//negative forward
-        		if(closedLoopForward(9000) == 1)
-        		{
-        			state = 1;
-        		}
-			}
-        	else if(state == 1)
-        	{
-        		motorFrontRight.set(0);
-    			motorBackRight.set(0);
-    			motorFrontLeft.set(0);
-    			motorBackLeft.set(0);
-    			encLeftDrive.reset();
-    			encRightDrive.reset();
-    			//navx.reset();
-    			state = 2;
-        	}
-        	else if(state == 2)
-        	{
-        		//negative left
-        		 if (turnDirection(-90)== 1)
-        		 {
-        			 state = 4;
-        		 }
-        	}
-        	else if(state == 4)
-        	{
-        		motorFrontRight.set(0);
-    			motorBackRight.set(0);
-    			motorFrontLeft.set(0);
-    			motorBackLeft.set(0);
-    			encLeftDrive.reset();
-    			encRightDrive.reset();
-    			state = 5;
-    			//navx.reset();
-    			navx.reset();
-        	}
-        	else if(state == 5)
-        	{
-        		//negative left
-        		if(closedLoopForward(6000) == 1)
-        		{
-        			state = 6;
-        		}
-        	}
-        	else if(state == 6)
-        	{
-        		//navx.reset();
-        		motorFrontRight.set(0);
-    			motorBackRight.set(0);
-    			motorFrontLeft.set(0);
-    			motorBackLeft.set(0);
-    			//encLeftDrive.reset();
-    			//navx.reset();
-    			state = 7;
-    			//navx.reset();
-        	}
-        	else if(state == 7)
-        	{
-        		//negative left
-        		 if (turnDirection(-90) == 1)
-        		 {
-        			 state = 8;
-        		 }
-        		 
-        		 if(targetAquired == 1)
-        		 {
-        			 if (turretTicks <= 5000 && turretTicks >= -5000)
-        			 {
-        				 if(turretSpeed > 0.1 && turretSpeed < 0.2)
-        				 {
-        					 turretSpeed = 0.2;
-        				 }
-        				 else if (turretSpeed > -0.1 && turretSpeed < -0.2)
-        				 {
-        					 turretSpeed = -0.2;
-        				 }
-        				 turretMotor.set(turretSpeed);
-        				 //turretMotor.set(turretPID.get() * -1);
-        				 //turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
-        			 }
-        		 }
-        	}
-        	else if (state == 8)
-        	{
-        		motorFrontRight.set(0);
-    			motorBackRight.set(0);
-    			motorFrontLeft.set(0);
-    			motorBackLeft.set(0);
-    			turretMotor.set(0);
-    			 if(targetAquired == 1)
-        		 {
-        			 if (turretTicks <= 5000 && turretTicks >= -5000)
-        			 {
-        				 if(turretSpeed > 0.1 && turretSpeed < 0.2)
-        				 {
-        					 turretSpeed = 0.2;
-        				 }
-        				 else if (turretSpeed > -0.1 && turretSpeed < -0.2)
-        				 {
-        					 turretSpeed = -0.2;
-        				 }
-        				 turretMotor.set(turretSpeed);
-        			 }}
-        	}
-        	else if (state == 9)
-        	{
-        		/*
-        		 if(targetAquired == 1.0)
-        	        {
-        	        	turretMotor_pidSource.pidInput = targetCenterDistance;
-        	        	//turretMotor.set(turretPID.get() * -1);
-        	        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
-        	        
-        		  if (turretTicks <= 5000 && turretTicks >= -5000 && leftBTN10)
-        	        {
-        	        	if(turretSpeed > 0.1 && turretSpeed < 0.2)
-        	        	{
-        	        		turretSpeed = 0.2;
-        	        	}
-        	        	else if (turretSpeed > -0.1 && turretSpeed < -0.2)
-        	        	{
-        	        		turretSpeed = -0.2;
-        	        	}
-        	        	turretMotor.set(turretSpeed);
-        	        	//turretMotor.set(turretPID.get() * -1);
-        	        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
-        	        }
-        	      }
-        	      */
-        		/*state = 10;
-        	}
-        	else if (state == 10)
-        	{
-        		
-        	}
+                shootLatch = !shootLatch;
+        }
+        if(shootLatch)
+        {
+                feeder.set(-0.8);
         }
         else
         {
-        	motorFrontRight.set(jsRightAxisY);
-        	motorBackRight.set(jsRightAxisY);
-        	motorFrontLeft.set(jsLeftAxisY);
-        	motorBackLeft.set(jsLeftAxisY);
-        	turretMotor.set(0);
-  		}
-        */
-        
-        if (rightBTN9)
-        {
-        	 if(targetAquired == 1)
-    		 {
-    			 /*if (turretTicks <= 5000 && turretTicks >= -5000)
-    			 {
-    				 if (turretSpeed > 0.5)
-    				 {
-    					 turretSpeed = 0.4;
-    				 }
-    				 else if (turretSpeed < -0.5)
-    				 {
-    					 turretSpeed = 0.4;
-    				 }
-    				 else if(turretSpeed > 0.1 && turretSpeed < 0.2)
-    				 {
-    					 turretSpeed = 0.2;
-    				 }
-    				 else if (turretSpeed > -0.1 && turretSpeed < -0.2)
-    				 {
-    					 turretSpeed = -0.2;
-    				 }*/
-    		 		//}
-        		 		if (turretSpeed == 1.0)
-		 				{
-        		 			motorFrontRight.set(0);
-        		        	motorBackRight.set(0);
-        		        	motorFrontLeft.set(0);
-        		        	motorBackLeft.set(0);
-		 				}
-        		 		else if (turretSpeed == -1.0)
-        		 		{ 
-        		 			motorFrontRight.set(0);
-        		        	motorBackRight.set(0);
-        		        	motorFrontLeft.set(0);
-        		        	motorBackLeft.set(0);
-        		 		}
-        		 		else if ((turretSpeed > 0.2))
-        		 		{
-        		 		  	motorFrontRight.set(-turretSpeed);
-        		        	motorBackRight.set(-turretSpeed);
-        		        	motorFrontLeft.set(-turretSpeed);
-        		        	motorBackLeft.set(-turretSpeed);
-        		 		}
-        		 		else if ((turretSpeed) <= 0.2 && (turretSpeed) >= 0.1)
-        		 		{
-    				  	motorFrontRight.set(-0.2);
-    		        	motorBackRight.set(-0.2);
-    		        	motorFrontLeft.set(-0.2);
-    		        	motorBackLeft.set(-0.2);
-    		 			}	
-        		 		else if ((turretSpeed < -0.2))
-        		 		{
-        		 		 	motorFrontRight.set(-turretSpeed);
-        		        	motorBackRight.set(-turretSpeed);
-        		        	motorFrontLeft.set(-turretSpeed);
-        		        	motorBackLeft.set(-turretSpeed);
-        		 		}
-        		 		/*else if ((turretSpeed) >= -0.2 && (turretSpeed <= -0.1))
-        		 		{
-        		 			motorFrontRight.set(0.2);
-        		        	motorBackRight.set(0.2);
-        		        	motorFrontLeft.set(0.2);
-        		        	motorBackLeft.set(0.2);
-        		 		}*/
-        	 			else
-    		        	{
-    		        		motorFrontRight.set(0);
-        		        	motorBackRight.set(0);
-        		        	motorFrontLeft.set(0);
-        		        	motorBackLeft.set(0);
-    		        	}
-        	
-    			 	
-    		 }
-        	 }
-		    else
-	        {
-	        	motorFrontRight.set(jsRightAxisY);
-	        	motorBackRight.set(jsRightAxisY);
-	        	motorFrontLeft.set(jsLeftAxisY);
-	        	motorBackLeft.set(jsLeftAxisY);
-	        	turretMotor.set(0);
-	        }
-    			 
-        System.out.println("Turret Speed" + turretSpeed);
-        System.out.println(turretMotor_pidOutput.pidOutput * -1);
-        /*
-         
-         // NOT THE StATES ACTUAL WORKING BUTTONS 
-        if (rightBTN9)
-        {
-        	motorFrontRight.set(-0.5);
-  		    motorBackRight.set(-0.5);
-  		    motorFrontLeft.set(0.5);
-  		    motorBackLeft.set(0.5);
+                feeder.set(-0.0);
         }
-        else if(rightBTN8) {
-        	motorFrontRight.set(0.5);
-        	motorBackRight.set(0.5);
-        	motorFrontLeft.set(-0.5);
-        	motorBackLeft.set(-0.5);
+        lBTN1_old = lBTN1;
+
+        //gearpiston BUTTON (LATCHED)
+        if (rBTN3 == true && rBTN3_old == false)
+        {
+                if(gearpiston.get() == Value.kForward)
+                {
+                        gearpiston.set(Value.kReverse);
+                }
+                else
+                {
+                        gearpiston.set(Value.kForward);
+                }
+        }
+        rBTN3_old = rBTN3;
+
+        //CLIMBER BUTTONS
+        if (lBTN3) {
+                climber.set(-0.8);
+        }
+        else if (lBTN2) {
+                climber.set(0.8);
         }
         else {
-  		    motorFrontRight.set(jsRightAxisY);
- 		    motorBackRight.set(jsRightAxisY);
- 		    motorFrontLeft.set(jsLeftAxisY);
- 		    motorBackLeft.set(jsLeftAxisY);
-		}
-		
-		*/
-        ////////////////////////////////////////////////////////////////////////////////////////////////////
-       //OLD CODE FOR TESTING MOTION ///////////////////////////////////////////////////////////////
-
-      /*  if (rightBTN10)
-        {
-        if(nvYaw < 89.5)
-		{
-			motorFrontRight.set(-0.3);
-			motorBackRight.set(-0.3);
-			motorFrontLeft.set(-0.3);
-			motorBackLeft.set(-0.3);
-		}
-        else {
-				motorFrontRight.set(0);
-				motorBackRight.set(0);
-				motorFrontLeft.set(0);
-				motorBackLeft.set(0);
-			}
-		}
-        else if (rightBTN11)
-        {
-        	 if(nvYaw > -89.5)
-     		{
-     			motorFrontRight.set(0.3);
-     			motorBackRight.set(0.3);
-     			motorFrontLeft.set(0.3);
-     			motorBackLeft.set(0.3);
-     		}
-             else {
-     				motorFrontRight.set(0);
-     				motorBackRight.set(0);
-     				motorFrontLeft.set(0);
-     				motorBackLeft.set(0);
-             }
-
+                climber.set(0.0);
         }
-        else if (nvYaw < -89.5)
-        {
-        	navx.reset();
-        }
-        else if (leftBTN9)
-        {
-        	encLeftDrive.reset();
-        	encRightDrive.reset();
-        }
-        else if (leftBTN10)
-        {
 
-        	motorFrontRight.set(-0.3);
-			motorBackRight.set(-0.3);
-			motorFrontLeft.set(0.3);
-			motorBackLeft.set(0.3);
+        SmartDashboard.putString("SHOOTER LATCH", "STATE" + shootLatch);
+        SmartDashboard.putString("MOTOR LATCH", "STATE" + xBTN5_old);
+        //shooter.set(motorPower);
+        //secondShooterMotor.set(motorPower);
+        shooterRPM = shooter.getPulseWidthVelocity() * (600.0/4096) * -1;
+        talon2 = pdp.getCurrent(0);
+        talon1 = pdp.getCurrent(1);
+        System.out.println("ANGLE" + navx.getAngle());
+
+        //SmartDashboard.putNumber("RPM", shooterRPM);
+        //System.out.println(shooterPwr);
+        SmartDashboard.putNumber("CURRENT T2", talon2);
+        SmartDashboard.putNumber("CURRENT T1", talon1);
+        SmartDashboard.putNumber("OUTPUT", motorPower);
+        SmartDashboard.putNumber("speed", leftFront.get());
+}
 
 
-        }
-        else if(leftBTN7)
+@Override
+public void testPeriodic() {
+}
+
+//****************************STATE MACHINE COMMANDS*************
+//AUTONOMOUS MOTION TURNING(Negative : Left, Positive : Right -- relative to front)
+
+//ANGULAR MODULE
+public int turnDirection(double c)
+{
+        int result = 0;
+        if (c < 0)
         {
-			if(encLeftDriveDistance < 800 && encRightDriveDistance < 800)
-			{
-				motorFrontRight.set(0.3);
-				motorBackRight.set(0.3);
-				motorFrontLeft.set(-0.3);
-				motorBackLeft.set(-0.3);
-				if (encLeftDriveDistance > 800 && encRightDriveDistance > 800) {
-					motorFrontRight.set(0);
-					motorBackRight.set(0);
-					motorFrontLeft.set(0);
-					motorBackLeft.set(0);
-				}
-			}
+                if(nvYaw > c)
+                {
+                        rightFront.set(0.55);
+                        rightMid.set(0.55);
+                        rightBack.set(0.55);
+                        leftFront.set(0.55);
+                        leftMid.set(0.55);
+                        leftBack.set(0.55);
+                }
+                else
+                {
+                        result = 1;
+
+                }
         }
-        else if (rightBTN8)
+        else if (c > 0)
         {
-			motorFrontRight.set(0.5);
-			motorBackRight.set(0.5);
-			motorFrontLeft.set(0.5);
-			motorBackLeft.set(0.5);
+                if(nvYaw < c)
+                {
+                        rightFront.set(-0.55);
+                        rightMid.set(-0.55);
+                        rightBack.set(-0.55);
+                        leftFront.set(-0.55);
+                        leftMid.set(-0.55);
+                        leftBack.set(-0.55);
+                }
+                else
+                {
+                        result = 1;
+                }
         }
-        else if (rightBTN9)
+        return result;
+}
+
+//DIRECTIONAL MODULE
+public int straightDirection(double x)
+{
+        int result = 0;
+        if (x * conversionFactor < 0)
         {
-        	motorFrontRight.set(-0.5);
-			motorBackRight.set(-0.5);
-			motorFrontLeft.set(-0.5);
-			motorBackLeft.set(-0.5);
+                if(encLeftDriveDistance >  x * conversionFactor)
+                {
+                        rightFront.set(-0.35);
+                        rightMid.set(-0.35);
+                        rightBack.set(-0.35);
+                        leftFront.set(0.35);
+                        leftMid.set(0.35);
+                        leftBack.set(0.35);
+                }
+                else
+                {
+                        result = 1;
+                }
         }
         else
-		{
-		    motorFrontRight.set(jsRightAxisY);
-		    motorBackRight.set(jsRightAxisY);
-		    motorFrontLeft.set(jsLeftAxisY);
-		    motorBackLeft.set(jsLeftAxisY);  }  *//////////////////////////////////////////////////////////////
+        {
+                if(encLeftDriveDistance <  x * conversionFactor)
+                {
+                        rightFront.set(0.35);
+                        rightMid.set(0.35);
+                        rightBack.set(0.35);
+                        leftFront.set(-0.35);
+                        leftMid.set(-0.35);
+                        leftBack.set(-0.35);
+                }
+                else
+                {
+                        result = 1;
+                }
+        }
+        return result;
+}
 
-       //PID CONTROLLER VALUES
-        //SmartDashboard.putNumber("Shooter RPM", shooterMotor.getPulseWidthVelocity() * 600.0/4096);
-        //SmartDashboard.putNumber("Turret Ticks", turretTicks);
-        //SmartDashboard.putNumber("PID Calculated Motor Power", turretMotor.get());
-        //SmartDashboard.putNumber("PID Error", turretMotor.getError());
-        //SmartDashboard.putNumber("Right Joystick Y Axis", jsRightAxisY);
-        //SmartDashboard.putNumber("Left Joystick Y Axis", jsLeftAxisY);
+//STOP MODULE
+public void stopping()
+{
+        encLeftDrive.reset();
+        navx.reset();
+        rightFront.set(0.0);
+        rightMid.set(0.0);
+        rightBack.set(0.0);
+        leftFront.set(-0.0);
+        leftMid.set(-0.0);
+        leftBack.set(-0.0);
+}
 
-      //ENCODER DISTANCE
-    	encLeftDriveDistance = encLeftDrive.getDistance();
-        encRightDriveDistance = encRightDrive.getDistance();
+//CURRENT-STOP MODULE
+public int currentTest() {
+        int result = 0;
 
-        targetCenterDistance = table.getNumber("3882_ARROW_START", -4545.45);
-        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        if (condition == 1)
+        {
+                leftFront.set(-0);
+                leftMid.set(-0);
+                leftBack.set(-0);
+                rightFront.set(0);
+                rightMid.set(0);
+                rightBack.set(0);
+                result = 1;
+        }
+        else if (pdp.getCurrent(1) < 18.5) {
+                leftFront.set(-0.5);
+                leftMid.set(-0.5);
+                leftBack.set(-0.5);
+                rightFront.set(0.5);
+                rightMid.set(0.5);
+                rightBack.set(0.5);
 
-        //fakey object
+        }
+        else if ( pdp.getCurrent(1) >= 18.5) {
+                condition = 1;
+
+        }
+
+        return result;
+
+}
+
+//ALIGNER MODULE
+public int targeting()
+{
+        int result = 0;
         if(targetAquired == 1.0)
         {
-        	turretMotor_pidSource.pidInput = targetCenterDistance;
+                if (targetCenterDistance > 15)
+                {
+                        leftFront.set(0.25);
+                        leftMid.set(0.25);
+                        leftBack.set(0.25);
+                        rightFront.set(0.25);
+                        rightMid.set(0.25);
+                        rightBack.set(0.25);
+                }
+                else if (targetCenterDistance < -15)
+                {
+                        leftFront.set(-0.25);
+                        leftMid.set(-0.25);
+                        leftBack.set(-0.25);
+                        rightFront.set(-0.25);
+                        rightMid.set(-0.25);
+                        rightBack.set(-0.25);
+                }
+                if (targetCenterDistance < 15 && targetCenterDistance > -15)
+                {
+                        result = 1;
+                }
         }
+        return result;
+}
 
 
+/* AUTONOMOUS FUNCTIONS BASED ON POSITION AND ALLIANCE */
+
+public void centreRed()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
 
 
-        // drive chain high/low gear
-        if (rightBTN)
+        if ( state == 0 && straightDirection(-4.2) == 1)
         {
-            pistonShift.set(DoubleSolenoid.Value.kForward);
+                state = 1;
         }
-        else
+        else if (state == 1)
         {
-            pistonShift.set(DoubleSolenoid.Value.kReverse);
+                stopping();
+                state = 2;
         }
-        // intake extend/retract
-        if (leftBTN)
+        else if (state == 2)
         {
-            pistonIntake.set(DoubleSolenoid.Value.kForward);
+                //if (targeting() == 1)
+                //{
+                state = 3;
+                //}
         }
-        else
+
+        else if (state == 3)
         {
-            pistonIntake.set(DoubleSolenoid.Value.kReverse);
+                stopping();
+                gearpiston.set(Value.kForward);
+                state = 4;
         }
-
-        // intakemotor - start/stop
-        if (rightBTN3) {
-            intakeMotor.set(.5);
-        }
-        else if (rightBTN2)
+        else if (state == 4 && straightDirection(-2)==1)
         {
-            intakeMotor.set(-.5);
+                state = 5;
         }
-        else
+        else if (state == 5)
         {
-            intakeMotor.set(0);
+                stopping();
+                state = 6;
         }
-
-        //turret motor
-        if (leftBTN3) {
-            turretMotor.set(.15);
-        }
-        else if (leftBTN2)
+        else if (state == 6)
         {
-            turretMotor.set(-.15);
+                state = 7;
+
         }
-        else if (turretTicks <= 5000 && turretTicks >= -5000 && leftBTN6)
+        else if (state == 7)
         {
-        	if(turretSpeed > 0.1 && turretSpeed < 0.2)
-        	{
-        		turretSpeed = 0.2;
-        	}
-        	else if (turretSpeed > -0.1 && turretSpeed < -0.2)
-        	{
-        		turretSpeed = -0.2;
-        	}
-        	turretMotor.set(turretSpeed);
-        	//turretMotor.set(turretPID.get() * -1);
-        	//turretMotor.set(turretMotor_pidOutput.pidOutput * -1);
+                stopping();
+                state = 8;
         }
-        else
+        else if (state == 8 && straightDirection(2.5 )== 1)
         {
-        	turretMotor.set(0);
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10)//Current thingy here
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 && straightDirection(4)== 1)
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15)
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+
+}
+public void centreBlue()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+
+
+        if ( state == 0 && straightDirection(-4.2) == 1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2)
+        {
+                //if (targeting() == 1)
+                //{
+                state = 3;
+                //}
         }
 
-        //shooterMotor
-        if (rightBTN4) {
-            shooterMotor.set(.7);
+        else if (state == 3)
+        {
+                stopping();
+                gearpiston.set(Value.kForward);
+                state = 4;
         }
-        else if (rightBTN5) {
-            shooterMotor.set(-.7);
+        else if (state == 4 && straightDirection(-2)==1)
+        {
+                state = 5;
         }
-        else {
-            shooterMotor.set(0);
+        else if (state == 5)
+        {
+                stopping();
+                state = 6;
         }
+        else if (state == 6)
+        {
+                state = 7;
 
-        //System.out.println("JS RIGHT" + jsRightAxisY);
-        //System.out.println("JS LEFT" + jsLeftAxisY);
-        //System.out.println("       ");
-        //System.out.println("YAW" + nvYaw);
-        //System.out.println("        ");
+        }
+        else if (state == 7)
+        {
+                stopping();
+                state = 8;
+        }
+        else if (state == 8 && straightDirection(2 )== 1)
+        {
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10 && turnDirection(167)==1)
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 )//Current thingy here
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15)
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+}
+
+public void boilerRed()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+
+        if ( state == 0 && straightDirection(-7.12 ) == 1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2 && turnDirection(-27 ) == 1)
+        {
+                state = 3;
+
+        }
+        else if (state == 3)
+        {
+                stopping();
+                state = 4;
+        }
+        else if (state == 4 )
+        {
+                //TARGETING HERE
+                gearpiston.set(Value.kForward);
+                state = 5;
+        }
+        else if (state == 5)
+        {
+                stopping();
+                state = 6;
+        }
+        else if (state == 6  && straightDirection(-1.1  )== 1)
+        {
+                state = 7;
+
+        }
+        else if (state == 7)
+        {
+                stopping();
+                state = 8;
+        }
+        else if (state == 8 && straightDirection(2  )== 1)
+        {
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10 && turnDirection(80)==1)
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 )
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15 )
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+}
+public void boilerBlue()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+
+        if ( state == 0 && straightDirection(-7.12 ) == 1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2 && turnDirection(27 ) == 1)
+        {
+                state = 3;
+
+        }
+        else if (state == 3)
+        {
+                stopping();
+                state = 4;
+        }
+        else if (state == 4 )
+        {
+                //TARGETING HERE
+                gearpiston.set(Value.kForward);
+                state = 5;
+        }
+        else if (state == 5)
+        {
+                stopping();
+                state = 6;
+        }
+        else if (state == 6  && straightDirection(-1.1  )== 1)
+        {
+                state = 7;
+
+        }
+        else if (state == 7)
+        {
+                stopping();
+                state = 8;
+        }
+        else if (state == 8 && straightDirection(2  )== 1)
+        {
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10 && turnDirection(38)==1)
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 && straightDirection(1)==1)
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15 )
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+}
+
+public void retRed()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        if ( state == 0 && straightDirection(-7.0 ) == 1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2 && turnDirection(47) == 1)
+        {
+                state = 3;
+        }
+        else if (state == 3)
+        {
+                stopping();
+                state = 4;
+        }
+        else if (state == 4 )
+        {
+                gearpiston.set(Value.kForward);
+                //TARGETING GOES HERE
+                state = 5;
+        }
+        else if (state == 5)
+        {
+                stopping();
+                state = 6;
+        }
+        else if (state == 6 && straightDirection(-1.8 ) == 1)
+        {
+                state = 7;
+
+        }
+        else if (state == 7)
+        {
+                stopping();
+                state = 8;
+        }
+        else if (state == 8 && straightDirection(2.5  )== 1)
+        {
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10 && turnDirection(-56 ) == 1)
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 && straightDirection(-1  )== 1)
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15 )
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+}
+public void retBlue()
+{
+        targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
+        targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        if ( state == 0 && straightDirection(-5.2 ) == 1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2 && turnDirection(54) == 1)
+        {
+                state = 3;
+        }
+        else if (state == 3)
+        {
+                stopping();
+                state = 4;
+        }
+        else if (state == 4 )
+        {
+                gearpiston.set(Value.kForward);
+                //TARGETING GOES HERE
+                state = 5;
+        }
+        else if (state == 5)
+        {
+                stopping();
+                state = 6;
+        }
+        else if (state == 6 && straightDirection(-2.2 ) == 1)
+        {
+                state = 7;
+
+        }
+        else if (state == 7)
+        {
+                stopping();
+                state = 8;
+        }
+        else if (state == 8 && straightDirection(2.5  )== 1)
+        {
+                state = 9;
+        }
+        else if (state == 9)
+        {
+                stopping();
+                state = 10;
+
+        }
+        else if (state == 10 && turnDirection(-106 ) == 1)
+        {
+                state = 11;
+        }
+        else if (state == 11)
+        {
+                stopping();
+                state = 12;
+
+        }
+        else if (state == 12 && straightDirection(-2 )== 1)
+        {
+                state = 14;
+
+        }
+        else if (state == 14)
+        {
+                stopping();
+                state = 15;
+        }
+        else if (state == 15 )
+        {
+
+                state = 16;
+        }
+        else if (state == 16)
+        {
+                stopping();
+        }
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("state" + state);
+        System.out.println("targetcenterdistance             " + targetCenterDistance);
+}
+
+// TESTING STATE FOR CURRENT-STOP MODULES
+public void testAutonomous()
+{
+        encLeftDriveDistance= encLeftDrive.get();
+        if (state == 0 && straightDirection(-0.01)==1)
+        {
+                state = 1;
+        }
+        else if (state == 1)
+        {
+                stopping();
+                state = 2;
+        }
+        else if (state == 2 && currentTest() == 1)
+        {
+                System.out.println("fired");
+                stopping();
 
 
-
-
-        //CONSOLE PID DATA
-        //System.out.println("pidSource Value = " + turretMotor_pidSource.pidInput);
-        //System.out.println("turretTicks = " + turretTicks);
-       // System.out.println("Target Found = " + targetAquired);
-       // System.out.println("Target Center Distance = " + targetCenterDistance);
-       // System.out.println("pidcontroller average error = " + turretPID.getAvgError());
-       // System.out.println("pidcontroller value = " + turretPID.get() * -1);
-       // System.out.println("pidController onTarget = " + turretPID.onTarget());
-        //System.out.println("turretTicks = " + turretTicks);
-       // System.out.println("   ");
-        //System.out.println("3882_LONG_DIST = " + table.getNumber("3882_LONG_DIST", -9876.98));
-        //System.out.println("3882_LAT_DIST = " + table.getNumber("3882_LAT_DIST", -1234.12));
-        //System.out.println("3882_ARROW_START = " + table.getNumber("3882_ARROW_START", -4545.45));
-
-        // turretMotor
-
-        //Encoder Values
-
-       /* System.out.print("Left Encoder Driver Value   ");
-        System.out.println(encLeftDrive.get());
-        System.out.print("Right Encoder Driver Value      ");
-        System.out.println(encRightDrive.get());
-*/
-
-       // System.out.print("              Yaw        ");
-       // System.out.println(navx.getYaw())
-       // System.out.print("              Left Encoder Drive Distance           ");
-       // System.out.println(encLeftDriveDistance);
-
-        ///System.out.print("Right Encoder Drive Rate          ");
-        //System.out.println(encRightDrive.getRate());
-       // System.out.print("Left Encoder Drive Rate           ");
-      //  System.out.println(encLeftDrive.getRate());
-
-
-
-        // PID DIRECTION FOR TURRET
-
-
-    }
-
-
-
-
-
-
-    /**
-     * This function is called periodically during test mode
-     */
-    public void testPeriodic() {
-
-    }
-
-    //PID CONTROLLER STUFF
-    public class GenericPidOutput implements PIDOutput
-    {
-        double pidOutput;
-
-           @Override
-            public void pidWrite(double output)
-            {
-                pidOutput = output;
-            }
-
-            //Constructor
-            public GenericPidOutput()
-            {
-                pidOutput = 0.0;
-            }
-    }
-
-    public class GenericPidSource implements PIDSource
-    {
-        double pidInput;
-        PIDSourceType pidType;
-
-           @Override
-            public double pidGet()
-            {
-                return pidInput;
-            }
-
-           @Override
-           public void setPIDSourceType(PIDSourceType pidSource)
-           {
-              pidType = pidSource;
-           }
-
-           @Override
-           public PIDSourceType getPIDSourceType()
-           {
-               return pidType;
-           }
-
-            //Constructor
-            public GenericPidSource()
-            {
-               pidInput = 0.0;
-               pidType = PIDSourceType.kDisplacement;
-            }
-    }
-
-
-
-    public void auto1() 
-    {
-		
-	
-		
-    	if(straightDirection(-5000) == 1 && state == 0)
-		{
-			state = 1;
-		}
-		else if (state == 1)
-		{
-			motorFrontRight.set(0);
-			motorBackRight.set(0);
-			motorFrontLeft.set(0);
-			motorBackLeft.set(0);	
-		}
-    }
-
-    public void auto2()
-    {
-    	if(turnDirection(-45) == 1 && state == 0)
-		{
-			state = 1;
-		}
-		else if (state == 1)
-		{
-			motorFrontRight.set(0);
-			motorBackRight.set(0);
-			motorFrontLeft.set(0);
-			motorBackLeft.set(0);	
-		}
-    }
-    public void auto3() 
-    {
-    	System.out.println("                                    STATE" + state);
-    	
-    	if ( state == 0 && straightDirection(-3000) == 1)
-    	{
-        	state = 1;
-    	}
-    	else if (state == 1)
-    	{
-    		encLeftDrive.reset();
-    		navx.reset();
-    		motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-    		state = 2;
-    	}
-    	else if (state == 2 && turnDirection(-83) == 1)
-    	{
-    		state = 3;
-    		System.out.println("GFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF");        	state = 3;
-    	}
-
-    	else if (state == 3)
-    	{
-    		navx.reset();
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-        	state = 4;
-    	}
-    	else if (state == 4 && straightDirection(-3000)==1)
-    	{
-        	state = 5;
-    	}
-    	else if (state == 5)
-    	{
-    		navx.reset();
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();
-    		state = 6;
-    	}
-    	else if (state == 6 && turnDirection(-83) == 1)
-    	{
-    		state = 7;
-    		
-    	}
-    	else if (state == 7)
-    	{
-    		navx.reset();
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();
-    		state = 8;
-    	}
-    	else if (state == 8 && straightDirection(-3000)== 1)
-    	{
-    		state = 9;	
-    	}
-    	else if (state == 9)
-    	{
-    		navx.reset();
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();
-    		state = 10;
-    		
-    	}
-    	else if (state == 10 && turnDirection(-90) == 1)
-    	{
-    		state = 11;	
-    	}
-    	else if (state == 11)
-    	{
-    		navx.reset();
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();
-    		state = 12;
-    		
-    	}
-    	else if (state == 12 && straightDirection(-3000)== 1)
-    	{
-    		state = 14;
-    		
-    	}
-    	else if (state == 14)
-    	{
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();
-    		state = 15;
-    	}
-    	else if (state == 15 && turnDirection(-86) == 1 )
-    	{
-    		
-    		state =16;
-    	}
-    	else if (state == 16)
-    	{
-    		encLeftDrive.reset();
-        	motorFrontRight.set(0);
-    		motorBackRight.set(0);
-    		motorFrontLeft.set(0);
-    		motorBackLeft.set(0);
-			encLeftDrive.reset();
-			encRightDrive.reset();
-    		navx.reset();	
-    	
-    	}
-    	// ball auto
-
-    }
+                System.out.println("                                       Test value" + currentTest());
+        }
+}
 }
