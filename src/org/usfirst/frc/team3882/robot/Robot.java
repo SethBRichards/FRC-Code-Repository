@@ -32,7 +32,9 @@ import edu.wpi.first.wpilibj.PIDOutput;
 import edu.wpi.first.wpilibj.PIDSource;
 import edu.wpi.first.wpilibj.PIDSourceType;
 import edu.wpi.first.wpilibj.SPI;
+
 import com.ctre.CANTalon;
+
 import edu.wpi.first.wpilibj.Victor;
 import edu.wpi.first.wpilibj.PowerDistributionPanel;
 import edu.wpi.first.wpilibj.XboxController;
@@ -42,6 +44,7 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 import edu.wpi.first.wpilibj.Compressor;
 import edu.wpi.first.wpilibj.DoubleSolenoid;
 import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+
 import com.kauailabs.navx.frc.AHRS;
 
 public class Robot extends IterativeRobot {
@@ -65,13 +68,14 @@ double rightJS, leftJS;
 double rightJSAxis, leftJSAxis;
 
 // BUTTONS
-boolean rBTN1, rBTN2, rBTN3, rBTN4, rBTN5, lBTN1, lBTN2, lBTN3, lBTN4, lBTN5 = false;
-boolean xBTNA, xBTNB, xBTNX, xBTNY, xBTN5, xBTN4;
+boolean rBTN1, rBTN2, rBTN3, rBTN4, rBTN5, lBTN1, lBTN2, lBTN3, lBTN4, lBTN5, lBTN8 = false;
+boolean xBTNA, xBTNB, xBTNX, xBTNY, xBTN5, xBTN4, xBTN10, xBTN6, xBTN7 = false;
 
 //LATCH BOOLEANS
-boolean rBTN1_old, rBTN3_old, lBTN1_old, shootLatch, lowLatch = false;
+boolean rBTN1_old, rBTN3_old, rBTN4_old, rBTN5_old, intakeLatchP, intakeLatchN, lowLatch = false;
 
-boolean xBTN5_old, xBTN4_old, xBTNA_old, xBTNY_old;
+//XBOX LATCHES
+boolean xBTN5_old, xBTN6_old, xBTN4_old, xBTNA_old, xBTNY_old, xBTN10_old = false;
 
 // PNEUMATIC CONTROLLER MODULE
 final int pcm0 = 0;
@@ -93,7 +97,6 @@ int state;
 double targetAquired;
 double targetCenterDistance;
 
-Victor secondShooterMotor;
 PowerDistributionPanel pdp;
 int condition;
 
@@ -103,7 +106,9 @@ double talon2 = 0.0;
 double talon1 = 0.0;
 double shooterRPM = 0.0;
 
-final int conversionFactor = (1080);
+String driveSetting, gearSetting;
+
+final int conversionFactor = (-830);
 
 @Override
 public void robotInit() {
@@ -165,30 +170,45 @@ public void robotInit() {
         feeder = new CANTalon(13);
 
         // CAMERA
+        /*
         UsbCamera usbCam = new UsbCamera("mscam", 0);
         usbCam.setVideoMode(VideoMode.PixelFormat.kMJPEG, 160, 120, 20);
         MjpegServer server1 = new MjpegServer("cam1", 1181);
         server1.setSource(usbCam);
+        */
+        
+        UsbCamera camera = CameraServer.getInstance().startAutomaticCapture();
+        camera.setVideoMode(VideoMode.PixelFormat.kMJPEG, 160, 120, 20);
+        
+        
+        driveSetting = "LOW START";
+        gearSetting = "GEAR CLOSE START";
 }
 
 @Override
 public void autonomousInit() {
+		encLeftDrive.reset();
+    	navx.reset();
         autoSelected = chooser.getSelected();
         System.out.println("Auto selected: " + autoSelected);
         state = 0;
         condition = 0;
-        encLeftDrive.reset();
-        navx.reset();
+        gearpiston.set(Value.kReverse);
+
+         
 }
 @Override
 public void autonomousPeriodic() {
-        encLeftDriveDistance = encLeftDrive.get();
         nvYaw = navx.getAngle();
 
         talon1 = pdp.getCurrent(1);
+        SmartDashboard.putNumber("CURRENT AUTO STATE", state);
         SmartDashboard.putNumber("CURRENT2_T1", talon1);
 
-        System.out.println("Auto Running: Ticks = " + encLeftDriveDistance);
+        System.out.println("QUADRATURE" + encLeftDrive.get());
+        System.out.println("QUADRATURERight" + encRightDrive.get());
+
+        
         switch(autoSelected)
         {
         case 1:
@@ -261,38 +281,51 @@ public void teleopPeriodic() {
         lBTN3 = jsLeft.getRawButton(3);
         lBTN4 = jsLeft.getRawButton(4);
         lBTN5 = jsLeft.getRawButton(5);
+        lBTN8 = jsLeft.getRawButton(8);
         xBTNX = xbox.getXButton();
         xBTNY = xbox.getYButton();
         xBTNA = xbox.getAButton();
         xBTNB = xbox.getBButton();
         xBTN5 = xbox.getRawButton(5);
+        xBTN6 = xbox.getRawButton(6);
+        xBTN10 = xbox.getRawButton(10);
+        xBTN7 = xbox.getRawButton(7);
 
         //OPERATOR CONTROLS
-
+        
+        //CLEAR INTAKE OVERRIDE
+        if (xBTN10 && intakeLatchN) {
+        	intakeLatchN = false;
+        }
+        else if (xBTN10 && intakeLatchP) {
+        	intakeLatchP = false;
+        }
+        xBTN10_old = xBTN10;
+        
         //PRESSER
-        if (xBTN4 == true && xBTN4_old == false) {
+        if (xBTN5 == true && xBTN5_old == false) {
           presser.set(Value.kForward);
         }
         else {
           presser.set(Value.kReverse);
         }
-        xBTN4_old = xBTN4;
+        xBTN5_old = xBTN5;
 
         //REDUCER
-        if (xBTN5 == true && xBTN5_old == false) {
+        if (xBTN6 == true && xBTN6_old == false) {
                 lowLatch = !lowLatch;
         }
-        xBTN5_old = xBTN5;
+        xBTN6_old = xBTN6;
 
         //SHOOTER SPEED CHANGER
         if (xBTNY && !xBTNY_old) {
-          motorPower = motorPower + 0.05;
+          motorPower = motorPower - 0.01;
         }
         else if (xBTNA && !xBTNA_old) {
-          motorPower = motorPower - 0.05;
+          motorPower = motorPower + 0.01;
         }
         else if (xBTNB){
-          motorPower = -0.8;
+          motorPower = -0.85;
         }
         else if (xBTNX) {
           motorPower = 0.0;
@@ -327,6 +360,14 @@ public void teleopPeriodic() {
 
                 }
         }
+        else if (xBTN7) {
+        	leftFront.set(0.6);
+            leftMid.set(0.6);
+            leftBack.set(0.6);
+            rightFront.set(-0.6);
+            rightMid.set(-0.6);
+            rightBack.set(-0.6);
+        }
         // REDUCTION CHAIN
         else if (lowLatch) {
                 leftFront.set(leftJSAxis * .85);
@@ -347,36 +388,57 @@ public void teleopPeriodic() {
         }
 
         //INTAKE IN LATCHED
-        if (rBTN4) {
-        	intake.set(0.7);
+        if (rBTN4 == true && rBTN4_old == false) {
+        	intakeLatchP = !intakeLatchP;
+        	intakeLatchN = false;
         }
+        rBTN4_old = rBTN4;
         
         //INTAKE OUT LATCHED
-        if (rBTN5) {
+        if (rBTN5 == true && rBTN5_old == false) {
+        	intakeLatchN = !intakeLatchN;
+        	intakeLatchP = false;
+        }
+        rBTN5_old = rBTN5;
+        
+        //INTAKE SPEED SET
+        if (intakeLatchP) {
+        	intake.set(0.8);
+        }
+        else if (intakeLatchN) {
+        	intake.set(-0.8);
+        }
+        else {
         	intake.set(0.0);
         }
 
 
+        // REMOVE THIS LATER
+        if (lBTN8) {
+        	encLeftDrive.reset();
+        	navx.reset();
+        }
+        
+        
+        
         //SHIFTER LATCHED
         if (rBTN1 == true && rBTN1_old == false)
         {
                 if(driveChain.get() == Value.kForward)
                 {
                         driveChain.set(Value.kReverse);
+                        driveSetting = "LOW GEAR";
                 }
                 else
                 {
                         driveChain.set(Value.kForward);
+                        driveSetting = "HIGH GEAR";
                 }
         }
         rBTN1_old = rBTN1;
 
-        //SHOOTER LATCHED
-        if (lBTN1 == true && lBTN1_old == false)
-        {
-                shootLatch = !shootLatch;
-        }
-        if(shootLatch)
+        //SHOOTER
+        if (lBTN1)
         {
                 feeder.set(-0.8);
         }
@@ -384,48 +446,61 @@ public void teleopPeriodic() {
         {
                 feeder.set(-0.0);
         }
-        lBTN1_old = lBTN1;
 
-        //gearpiston BUTTON (LATCHED)
+        //GEAR PISTON BUTTON (LATCHED)
         if (rBTN3 == true && rBTN3_old == false)
         {
                 if(gearpiston.get() == Value.kForward)
                 {
                         gearpiston.set(Value.kReverse);
+                        gearSetting = "Closed";
                 }
                 else
                 {
                         gearpiston.set(Value.kForward);
+                        gearSetting = "Opened";
                 }
         }
         rBTN3_old = rBTN3;
 
         //CLIMBER BUTTONS
         if (lBTN3) {
-                climber.set(-0.8);
+                climber.set(0.8);
         }
         else if (lBTN2) {
-                climber.set(0.8);
+                climber.set(-0.8);
         }
         else {
                 climber.set(0.0);
         }
 
-        SmartDashboard.putString("SHOOTER LATCH", "STATE" + shootLatch);
-        SmartDashboard.putString("MOTOR LATCH", "STATE" + xBTN5_old);
-        //shooter.set(motorPower);
-        //secondShooterMotor.set(motorPower);
+        //SMARTDB PRINTS
+        
+        SmartDashboard.putNumber("Angularity", navx.getAngle());
+        
+        //LATCH STATES
+        SmartDashboard.putString("Drive Setting", driveSetting);
+        SmartDashboard.putString("Gear Setting", gearSetting);
+        SmartDashboard.putBoolean("Reduced Chain ", lowLatch);
+        SmartDashboard.putBoolean("Intake Forward ", intakeLatchN);
+        SmartDashboard.putBoolean("Intake Backward ", intakeLatchP);
+        
+        
+        //Uncomment if testing AMP-STOP.
+        //talon2 = pdp.getCurrent(0);
+        //talon1 = pdp.getCurrent(1);
+        //SmartDashboard.putNumber("CURRENT T2", talon2);
+        //SmartDashboard.putNumber("CURRENT T1", talon1);
+        
+        SmartDashboard.putNumber("Speed", leftFront.get());
+        SmartDashboard.putNumber("Motor Power", motorPower);
         shooterRPM = shooter.getPulseWidthVelocity() * (600.0/4096) * -1;
-        talon2 = pdp.getCurrent(0);
-        talon1 = pdp.getCurrent(1);
-        System.out.println("ANGLE" + navx.getAngle());
+        SmartDashboard.putNumber("Shooter RPM", shooterRPM);
+        System.out.println("ticks" + encLeftDrive.get());
+        System.out.println("ticksRight" + encRightDrive.get());
 
-        //SmartDashboard.putNumber("RPM", shooterRPM);
-        //System.out.println(shooterPwr);
-        SmartDashboard.putNumber("CURRENT T2", talon2);
-        SmartDashboard.putNumber("CURRENT T1", talon1);
-        SmartDashboard.putNumber("OUTPUT", motorPower);
-        SmartDashboard.putNumber("speed", leftFront.get());
+        
+        
 }
 
 
@@ -480,16 +555,17 @@ public int turnDirection(double c)
 public int straightDirection(double x)
 {
         int result = 0;
+        System.out.println("CONVERSION" + (x * conversionFactor));
         if (x * conversionFactor < 0)
         {
-                if(encLeftDriveDistance >  x * conversionFactor)
+                if(encLeftDrive.get() <  x * -conversionFactor)
                 {
                         rightFront.set(-0.35);
                         rightMid.set(-0.35);
                         rightBack.set(-0.35);
-                        leftFront.set(0.35);
-                        leftMid.set(0.35);
-                        leftBack.set(0.35);
+                        leftFront.set(0.38);
+                        leftMid.set(0.38);
+                        leftBack.set(0.38);
                 }
                 else
                 {
@@ -498,14 +574,14 @@ public int straightDirection(double x)
         }
         else
         {
-                if(encLeftDriveDistance <  x * conversionFactor)
+                if(encLeftDrive.get() >  x * -conversionFactor)
                 {
                         rightFront.set(0.35);
                         rightMid.set(0.35);
                         rightBack.set(0.35);
-                        leftFront.set(-0.35);
-                        leftMid.set(-0.35);
-                        leftBack.set(-0.35);
+                        leftFront.set(-0.38);
+                        leftMid.set(-0.38);
+                        leftBack.set(-0.38);
                 }
                 else
                 {
@@ -599,9 +675,9 @@ public void centreRed()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        encLeftDriveDistance= encLeftDrive.get();
 
-
-        if ( state == 0 && straightDirection(-4.2) == 1)
+        if ( state == 0 && straightDirection(4.2) == 1)
         {
                 state = 1;
         }
@@ -612,10 +688,10 @@ public void centreRed()
         }
         else if (state == 2)
         {
-                //if (targeting() == 1)
-                //{
+                if (targeting() == 1)
+                {
                 state = 3;
-                //}
+                }
         }
 
         else if (state == 3)
@@ -624,7 +700,7 @@ public void centreRed()
                 gearpiston.set(Value.kForward);
                 state = 4;
         }
-        else if (state == 4 && straightDirection(-2)==1)
+        else if (state == 4 && straightDirection(2)==1)
         {
                 state = 5;
         }
@@ -643,7 +719,7 @@ public void centreRed()
                 stopping();
                 state = 8;
         }
-        else if (state == 8 && straightDirection(2.5 )== 1)
+        else if (state == 8 && straightDirection(-2.5 )== 1)
         {
                 state = 9;
         }
@@ -663,7 +739,7 @@ public void centreRed()
                 state = 12;
 
         }
-        else if (state == 12 && straightDirection(4)== 1)
+        else if (state == 12 && straightDirection(-4)== 1)
         {
                 state = 14;
 
@@ -691,9 +767,17 @@ public void centreBlue()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
-
-
-        if ( state == 0 && straightDirection(-4.2) == 1)
+        encLeftDriveDistance= encLeftDrive.get();
+        if (state == 0)
+        {
+        	 state = 0;
+             condition = 0;
+             gearpiston.set(Value.kReverse);
+             navx.reset();
+             encLeftDrive.reset();
+             state = -1;
+        }
+        if ( state == -1 && straightDirection(4.2) == 1)
         {
                 state = 1;
         }
@@ -704,19 +788,19 @@ public void centreBlue()
         }
         else if (state == 2)
         {
-                //if (targeting() == 1)
+               // if (targeting() == 1)
                 //{
                 state = 3;
-                //}
+               //}
         }
 
         else if (state == 3)
         {
                 stopping();
-                gearpiston.set(Value.kForward);
+               // gearpiston.set(Value.kForward);
                 state = 4;
         }
-        else if (state == 4 && straightDirection(-2)==1)
+        else if (state == 4 && straightDirection(2)==1)
         {
                 state = 5;
         }
@@ -735,7 +819,7 @@ public void centreBlue()
                 stopping();
                 state = 8;
         }
-        else if (state == 8 && straightDirection(2 )== 1)
+        else if (state == 8 && straightDirection(-2 )== 1)
         {
                 state = 9;
         }
@@ -783,8 +867,8 @@ public void boilerRed()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
-
-        if ( state == 0 && straightDirection(-7.12 ) == 1)
+        encLeftDriveDistance= encLeftDrive.get();
+        if ( state == 0 && straightDirection(7.12 ) == 1)
         {
                 state = 1;
         }
@@ -805,16 +889,20 @@ public void boilerRed()
         }
         else if (state == 4 )
         {
-                //TARGETING HERE
+        	 if (targeting() == 1)
+             {
+             state = 5;
+             }
                 gearpiston.set(Value.kForward);
-                state = 5;
         }
         else if (state == 5)
         {
                 stopping();
+                gearpiston.set(Value.kForward);
+
                 state = 6;
         }
-        else if (state == 6  && straightDirection(-1.1  )== 1)
+        else if (state == 6  && straightDirection(-1.4  )== 1)
         {
                 state = 7;
 
@@ -824,7 +912,7 @@ public void boilerRed()
                 stopping();
                 state = 8;
         }
-        else if (state == 8 && straightDirection(2  )== 1)
+        else if (state == 8 && straightDirection(-2  )== 1)
         {
                 state = 9;
         }
@@ -871,8 +959,9 @@ public void boilerBlue()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        encLeftDriveDistance= encLeftDrive.get();
 
-        if ( state == 0 && straightDirection(-7.12 ) == 1)
+        if ( state == 0 && straightDirection(7.12 ) == 1)
         {
                 state = 1;
         }
@@ -893,16 +982,20 @@ public void boilerBlue()
         }
         else if (state == 4 )
         {
-                //TARGETING HERE
-                gearpiston.set(Value.kForward);
-                state = 5;
+        	 //if (targeting() == 1)
+             //{
+             state = 5;
+            // }
+
         }
         else if (state == 5)
         {
                 stopping();
+                gearpiston.set(Value.kForward);
+
                 state = 6;
         }
-        else if (state == 6  && straightDirection(-1.1  )== 1)
+        else if (state == 6  && straightDirection(2.6  )== 1)
         {
                 state = 7;
 
@@ -912,7 +1005,7 @@ public void boilerBlue()
                 stopping();
                 state = 8;
         }
-        else if (state == 8 && straightDirection(2  )== 1)
+        else if (state == 8 && straightDirection(-2  )== 1)
         {
                 state = 9;
         }
@@ -922,17 +1015,18 @@ public void boilerBlue()
                 state = 10;
 
         }
-        else if (state == 10 && turnDirection(38)==1)
+        else if (state == 10 && turnDirection(58)==1)
         {
                 state = 11;
         }
         else if (state == 11)
         {
                 stopping();
+                
                 state = 12;
 
         }
-        else if (state == 12 && straightDirection(1)==1)
+        else if (state == 12 && straightDirection(-1)==1)
         {
                 state = 14;
 
@@ -946,6 +1040,9 @@ public void boilerBlue()
         {
 
                 state = 16;
+                gearpiston.set(Value.kReverse);
+                shooter.set(-1);
+                feeder.set(-0.8);
         }
         else if (state == 16)
         {
@@ -960,6 +1057,7 @@ public void retRed()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
+        encLeftDriveDistance= encLeftDrive.get();
         if ( state == 0 && straightDirection(-7.0 ) == 1)
         {
                 state = 1;
@@ -980,13 +1078,17 @@ public void retRed()
         }
         else if (state == 4 )
         {
-                gearpiston.set(Value.kForward);
-                //TARGETING GOES HERE
+                if (targeting() == 1)
+                {
                 state = 5;
+                }
+               
         }
         else if (state == 5)
         {
                 stopping();
+                gearpiston.set(Value.kForward);
+
                 state = 6;
         }
         else if (state == 6 && straightDirection(-1.8 ) == 1)
@@ -1046,7 +1148,8 @@ public void retBlue()
 {
         targetCenterDistance = table.getNumber("3882_DELTA", -4545.45);
         targetAquired = table.getNumber("3882_TARGET_FOUND", -3535.35);
-        if ( state == 0 && straightDirection(-5.2 ) == 1)
+        encLeftDriveDistance= encLeftDrive.get();
+        if ( state == 0 && straightDirection(7.2 ) == 1)
         {
                 state = 1;
         }
@@ -1055,7 +1158,7 @@ public void retBlue()
                 stopping();
                 state = 2;
         }
-        else if (state == 2 && turnDirection(54) == 1)
+        else if (state == 2 && turnDirection(-14) == 1)
         {
                 state = 3;
         }
@@ -1066,16 +1169,19 @@ public void retBlue()
         }
         else if (state == 4 )
         {
-                gearpiston.set(Value.kForward);
-                //TARGETING GOES HERE
+                //if (targeting() == 1)
+              //  {
                 state = 5;
+               // }
         }
         else if (state == 5)
         {
                 stopping();
+                gearpiston.set(Value.kForward);
+
                 state = 6;
         }
-        else if (state == 6 && straightDirection(-2.2 ) == 1)
+        else if (state == 6 && straightDirection(3 ) == 1)
         {
                 state = 7;
 
@@ -1085,7 +1191,7 @@ public void retBlue()
                 stopping();
                 state = 8;
         }
-        else if (state == 8 && straightDirection(2.5  )== 1)
+        else if (state == 8 && straightDirection(-2.5  )== 1)
         {
                 state = 9;
         }
@@ -1102,6 +1208,8 @@ public void retBlue()
         else if (state == 11)
         {
                 stopping();
+                gearpiston.set(Value.kReverse);
+
                 state = 12;
 
         }
