@@ -1,0 +1,245 @@
+<head><version>2.83.6</version></head>
+<zoom>8</zoom>
+<Axis_Internet_Camera>
+  <auto_back_light>TRUE</auto_back_light>
+  <auto_exposure>FALSE</auto_exposure>
+  <auto_white_balance>TRUE</auto_white_balance>
+  <brightness_value>50</brightness_value>
+  <color_level_value>50</color_level_value>
+  <compression_index>5</compression_index>
+  <contrast_value>50</contrast_value>
+  <exposure_value>50</exposure_value>
+  <ip_address>10.38.82.13</ip_address>
+  <is_active>TRUE</is_active>
+  <mirrot>FALSE</mirrot>
+  <password>admin</password>
+  <port>80</port>
+  <resolution>320x240</resolution>
+  <sharpness_value>50</sharpness_value>
+  <username>root</username>
+  <view_only>FALSE</view_only>
+</Axis_Internet_Camera>
+<RGB_Filter>
+  <channel>16</channel>
+  <hue_value>100</hue_value>
+  <hysteresis>0</hysteresis>
+  <min_value>168</min_value>
+  <result_type>2</result_type>
+</RGB_Filter>
+<Calculate_Distance>
+  <distance_between_index>1</distance_between_index>
+  <line_x_end>0</line_x_end>
+  <line_x_start>0</line_x_start>
+  <line_y_end>240</line_y_end>
+  <line_y_start>0</line_y_start>
+  <point_x>BLOB_TRACKING</point_x>
+  <poiny_y>120</poiny_y>
+  <result>3882_LAT_DISTANCE</result>
+  <x_end/>
+  <x_start/>
+  <y_end/>
+  <y_start/>
+</Calculate_Distance>
+<Line_Pattern>
+  <angle_increment>0.0</angle_increment>
+  <bottom_padding>1</bottom_padding>
+  <color>green</color>
+  <confidence>90</confidence>
+  <display_as_annotation>1</display_as_annotation>
+  <has_border>1</has_border>
+  <left_padding>1</left_padding>
+  <line_color>red</line_color>
+  <max_angle>359.236</max_angle>
+  <max_length/>
+  <merge_count/>
+  <merge_overlap>20</merge_overlap>
+  <min_angle>359.236</min_angle>
+  <min_length/>
+  <overlay_image>Source</overlay_image>
+  <pattern>18 10 28 9 11 </pattern>
+  <remove_background>0</remove_background>
+  <riht_padding>1</riht_padding>
+  <text_size>Normal (10pt)</text_size>
+  <thickness>1</thickness>
+  <top_padding>1</top_padding>
+</Line_Pattern>
+<Set_Variable>
+  <set_1_array>0</set_1_array>
+  <set_1_once>0</set_1_once>
+  <set_2_array>0</set_2_array>
+  <set_2_once>0</set_2_once>
+  <set_3_array>0</set_3_array>
+  <set_3_once>0</set_3_once>
+  <set_4_array>0</set_4_array>
+  <set_4_once>0</set_4_once>
+  <set_5_array>0</set_5_array>
+  <set_5_once>0</set_5_once>
+  <set_6_array>0</set_6_array>
+  <set_6_once>0</set_6_once>
+  <set_7_array>0</set_7_array>
+  <set_7_once>0</set_7_once>
+  <set_8_array>0</set_8_array>
+  <set_8_once>0</set_8_once>
+  <set_9_array>0</set_9_array>
+  <set_9_once>0</set_9_once>
+  <set_10_array>0</set_10_array>
+  <set_10_once>0</set_10_once>
+  <set_11_array>0</set_11_array>
+  <set_11_once>0</set_11_once>
+  <set_12_array>0</set_12_array>
+  <set_12_once>0</set_12_once>
+  <set_13_array>0</set_13_array>
+  <set_13_once>0</set_13_once>
+  <set_14_array>0</set_14_array>
+  <set_14_once>0</set_14_once>
+  <set_15_array>0</set_15_array>
+  <set_15_once>0</set_15_once>
+  <set_16_array>0</set_16_array>
+  <set_16_once>0</set_16_once>
+  <value_1/>
+  <value_2/>
+  <value_3/>
+  <value_4/>
+  <value_5/>
+  <value_6/>
+  <value_7/>
+  <value_8/>
+  <value_9/>
+  <value_10/>
+  <value_11/>
+  <value_12/>
+  <value_13/>
+  <value_14/>
+  <value_15/>
+  <value_16/>
+  <variable_1>3882_LONG_DISTANCE</variable_1>
+  <variable_2>3882_DELTA</variable_2>
+  <variable_3>3882_ARROW_START</variable_3>
+  <variable_4>3882_TARGET_FOUND</variable_4>
+  <variable_5>IMAGE_HEIGHT</variable_5>
+  <variable_6/>
+  <variable_7/>
+  <variable_8/>
+  <variable_9/>
+  <variable_10/>
+  <variable_11/>
+  <variable_12/>
+  <variable_13/>
+  <variable_14/>
+  <variable_15/>
+  <variable_16/>
+</Set_Variable>
+<Display_Arrow>
+  <clear_image>0</clear_image>
+  <color>green</color>
+  <display_as_annotation>1</display_as_annotation>
+  <display_mode_index>0</display_mode_index>
+  <head_thickness>7</head_thickness>
+  <line_thickness>3</line_thickness>
+  <xy_list/>
+  <x_end>[LINE_PATTERN:1]</x_end>
+  <x_end_map/>
+  <x_start>[image_width/2]</x_start>
+  <x_start_map/>
+  <y_end>[LINE_PATTERN:2]</y_end>
+  <y_end_map/>
+  <y_start>[image_height/2]</y_start>
+  <y_start_map/>
+</Display_Arrow>
+<VBScript_Program>
+  <auto_reload>TRUE</auto_reload>
+  <continue_on_errors>FALSE</continue_on_errors>
+  <script>list = GetArrayVariable("LINE_PATTERN")
+if isArray(list) then
+  if ubound(list) &gt; 0 then
+
+		' based on a line pattern in 8 x actual inches
+		' of 10 17 31 32 10 = 100
+
+    targetPixelHeight = (list(3)/10)
+    targetSamples = 0
+
+    ' calibrated for an Axis camera
+    imageHeight = GetVariable("IMAGE_HEIGHT")
+    cameraFieldOfView = 47.5
+    targetHeight = 100.0
+
+		' determine distance in 8 x inches
+    totalDistance = (((targetHeight*imageHeight)/targetPixelHeight)/2)/_
+      tan(((cameraFieldOfView*3.14159)/180.0)/2.0)
+
+		' convert to ft (12 inch per ft * 8 inch multiplier) = 96
+		totalDistance = CInt((totalDistance*100)/96)/100
+
+		' save it for use in other modules
+    SetVariable "Distance", totalDistance
+		SetVariable "3882_TARGET_FOUND", 1.0
+		SetVariable "3882_DELTA", 160 - list(1)
+
+
+  end if
+end if</script>
+  <source_mode>gui</source_mode>
+  <tab_size_index>1</tab_size_index>
+</VBScript_Program>
+<Display_Arrow>
+  <clear_image>0</clear_image>
+  <color>red</color>
+  <display_as_annotation>1</display_as_annotation>
+  <display_mode_index>1</display_mode_index>
+  <head_thickness>5</head_thickness>
+  <line_thickness>2</line_thickness>
+  <xy_list/>
+  <x_end>200</x_end>
+  <x_end_map>160</x_end_map>
+  <x_start>100</x_start>
+  <x_start_map>3882_ARROW_START</x_start_map>
+  <y_end>100</y_end>
+  <y_end_map>120</y_end_map>
+  <y_start>100</y_start>
+  <y_start_map>120</y_start_map>
+</Display_Arrow>
+<Display_Line>
+  <clear_image>0</clear_image>
+  <color_index>yellow</color_index>
+  <display_as_annotation>1</display_as_annotation>
+  <display_mode_index>0</display_mode_index>
+  <thickness>1</thickness>
+  <xy_list_map/>
+  <x_end>160</x_end>
+  <x_end_map/>
+  <x_start>160</x_start>
+  <x_start_map/>
+  <y_end>30</y_end>
+  <y_end_map/>
+  <y_start>240</y_start>
+  <y_start_map/>
+</Display_Line>
+<Display_Line>
+  <clear_image>0</clear_image>
+  <color_index>green</color_index>
+  <display_as_annotation>1</display_as_annotation>
+  <display_mode_index>0</display_mode_index>
+  <thickness>1</thickness>
+  <xy_list_map/>
+  <x_end>180</x_end>
+  <x_end_map/>
+  <x_start>180</x_start>
+  <x_start_map/>
+  <y_end>60</y_end>
+  <y_end_map/>
+  <y_start>240</y_start>
+  <y_start_map/>
+</Display_Line>
+<NetworkTables>
+  <delay>100</delay>
+  <filter_type_index>0</filter_type_index>
+  <hostname>roborio-3882-frc.local</hostname>
+  <port>1735</port>
+  <prefix>/dataTable/</prefix>
+  <variables_to_send>3882_ARROW_START
+3882_DELTA
+3882_LONG_DIST
+3882_TARGET_FOUND</variables_to_send>
+  <variable_type_index>0</variable_type_index>
+</NetworkTables>
