@@ -1,0 +1,1262 @@
+package org.usfirst.frc.team3882.robot;
+
+import edu.wpi.first.wpilibj.AnalogInput;
+import edu.wpi.first.wpilibj.CameraServer;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.IterativeRobot;
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PIDOutput;
+import edu.wpi.first.wpilibj.PIDSource;
+import edu.wpi.first.wpilibj.PIDSourceType;
+import edu.wpi.first.wpilibj.PowerDistributionPanel;
+import edu.wpi.first.wpilibj.Spark;
+import edu.wpi.first.wpilibj.Talon;
+import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import com.kauailabs.navx.frc.AHRS;
+import com.ctre.phoenix.motorcontrol.can.WPI_TalonSRX;
+import edu.wpi.cscore.MjpegServer;
+import edu.wpi.cscore.UsbCamera;
+import edu.wpi.first.networktables.NetworkTable;
+import edu.wpi.first.networktables.NetworkTableEntry;
+import edu.wpi.first.networktables.NetworkTableInstance;
+import edu.wpi.first.wpilibj.SPI;
+
+// Not yet implemented or planned to be removed.
+//import edu.wpi.cscore.VideoMode;
+//import com.ctre.phoenix.motorcontrol.can.TalonSRX;
+import edu.wpi.first.wpilibj.PIDController;
+
+public class Robot extends IterativeRobot {
+
+	final int defaultAuto = 999;
+	final String customAuto = "My Auto";
+	final String leftSwitch = "Left Switch";
+	final String centerSwitch = "Center Switch";
+	final String rightSwitch = "Right Switch";
+	final String leftScale = "Left Scale";
+	final String centerScale = "Center Scale";
+	final String rightScale = "Right Scale";
+	final String leftExchange = "Left Exchange";
+	final String centerExchange = "Center Exchange";
+	final String rightExchange = "Right Exchange";
+	final String straightForward = "straightForward";
+
+	NetworkTableInstance table;
+	NetworkTable dataTable;
+	NetworkTableEntry cxt, cyt;
+	double cx, cy;
+	String fmsData;
+	String autoSelected;
+	int autoSelectedInt;
+	SendableChooser<Integer> chooser;
+	Spark m1, m2, m3, m0;
+	Talon m4, m5;
+	Talon climber, hook;
+	WPI_TalonSRX elev;
+	WPI_TalonSRX arm;
+
+	Joystick js1, js2;
+	Compressor compressor;
+	AHRS navx;
+	Encoder enc1, enc2;
+	PowerDistributionPanel pdp;
+	DoubleSolenoid driveChain, bikeBrake, grip1, grip2;
+	AnalogInput pressureSensor;
+	UsbCamera camera;
+	MjpegServer server;
+	XboxController xbox;
+	DigitalInput lineTracker;
+
+	double valueEnc;
+	double nvYaw;
+	double pressure;
+
+	double rAxis, lAxis;
+	boolean rBtn1, rBtn2, rBtn3, rBtn4, rBtn5, rBtn8, rBtn9;
+	boolean lBtn1, lBtn2, lBtn3, lBtn4, lBtn5, lBtn6, lBtn7;
+
+	boolean xBtnA, xBtnB, xBtnX, xBtnY, xBtnL, xBtnR, xBtnBack, xBtnStart;
+	double xLBx, xRBx, xRAx, xLAx;
+
+	boolean tlatch = false;
+
+	Timer timer;
+	double t1, t2;
+	String clock = "time";
+	WPI_TalonSRX talon;
+
+	// Auto variables.
+	Boolean elevBool = true;
+	Boolean eBool = true;
+	Boolean armBool = true;
+	int sequence = 0;
+	boolean init = false;
+	double lSpeed = 0.73; // Calibrated compensation.
+	double rSpeed = 0.75;
+	int direction = 1;
+	double currentAngleObjective = 0;
+	double t3, t4;
+
+	PIDController elevPID;
+	GenericPidSource elevSrc;
+	GenericPidOutput elevOutput;
+
+	// Elevator Control Variables
+	double elevEnc;
+	double upperElevEnc = -17500.0;
+	double lowerElevEnc = 20.0;
+	double armEnc;
+	double upperArmEnc = -2350.0;
+	double lowerArmEnc = 20.0;
+	double initArmEnc;
+	double armTolerance;
+	boolean armInit;
+
+	int armDeviceNo, elevDeviceNo;
+
+	int timeOutManipulator;
+
+	String gearString, gripString, bikeString;
+
+	@Override
+	public void robotInit() {
+		chooser = new SendableChooser<Integer>();
+		chooser.addDefault("leftSwitch", 1);
+		chooser.addObject("leftScale", 2);
+		chooser.addObject("---------", 3);
+		chooser.addObject("rightSwitch", 4);
+		chooser.addObject("rightScale", 5);
+		chooser.addObject("---------", 6);
+		chooser.addObject("centerSwitch", 7);
+		chooser.addObject("---------", 8);
+		chooser.addObject("centerExchange", 9);
+		chooser.addObject("straightForward", 10);
+		SmartDashboard.putData("Autonomous Selector", chooser);
+
+		fmsData = DriverStation.getInstance().getGameSpecificMessage();
+
+		// Drive
+		m0 = new Spark(0); // L
+		m1 = new Spark(1); // R
+		m2 = new Spark(2); // L
+		m3 = new Spark(3); // R
+
+		m4 = new Talon(4);
+		m5 = new Talon(5);
+		climber = new Talon(6);
+		hook = new Talon(7);
+
+		// armDeviceNo = 12;
+		// elevDeviceNo = 8;
+
+		elev = new WPI_TalonSRX(4);
+		arm = new WPI_TalonSRX(8);
+
+		// Shift
+		driveChain = new DoubleSolenoid(0, 1);
+		driveChain.set(DoubleSolenoid.Value.kForward);
+		gearString = "High";
+		bikeBrake = new DoubleSolenoid(2, 3);
+		bikeBrake.set(DoubleSolenoid.Value.kReverse);
+		bikeString = "Disengaged";
+		grip1 = new DoubleSolenoid(4, 5);
+		grip1.set(DoubleSolenoid.Value.kForward);
+		gripString = "Engaged";
+
+		js1 = new Joystick(2);
+		js2 = new Joystick(1);
+		xbox = new XboxController(0);
+
+		compressor = new Compressor();
+		compressor.start();
+
+		// Sensorbase for Auto
+		navx = new AHRS(SPI.Port.kMXP);
+		enc1 = new Encoder(0, 1); // DIO
+		enc2 = new Encoder(2, 3); // DIO
+		pdp = new PowerDistributionPanel();
+		lineTracker = new DigitalInput(4);
+		timer = new Timer();
+		pressureSensor = new AnalogInput(0);
+		timer.start();
+		timer.reset();
+		t1 = 0;
+		t2 = 0;
+
+		// Network Table
+		table = NetworkTableInstance.getDefault();
+		dataTable = table.getTable("limelight");
+
+		// Cameras
+		camera = CameraServer.getInstance().startAutomaticCapture();
+
+		// Arm Doubles
+		initArmEnc = 0;
+		armTolerance = 100;
+		armInit = false;
+		elevBool = true;
+		armBool = true;
+		timeOutManipulator = 100;
+		// Check Channel
+
+		arm.getSensorCollection().setQuadraturePosition(0, timeOutManipulator);
+		elev.getSensorCollection().setQuadraturePosition(0, timeOutManipulator);
+	}
+
+	@Override
+	public void autonomousInit() {
+		autoSelectedInt = chooser.getSelected();
+		System.out.println("Auto selected: " + autoSelected);
+
+		// Shift
+		driveChain.set(DoubleSolenoid.Value.kForward);
+		gearString = "High";
+		bikeBrake.set(DoubleSolenoid.Value.kReverse);
+		bikeString = "Disengaged";
+		grip1.set(DoubleSolenoid.Value.kForward);
+
+		// Sensorbase for Auto
+		navx.reset();
+		// enc1 = new Encoder(0, 1); // DIO
+		// enc2 = new Encoder(2, 3); // DIO
+
+		timer.start();
+		timer.reset();
+		t1 = 0;
+		t2 = 0;
+
+		elevBool = true;
+		init = false;
+		navx.reset();
+		sequence = 0;
+		currentAngleObjective = 0;
+		timeOutManipulator = 100;
+
+		arm.getSensorCollection().setQuadraturePosition(0, timeOutManipulator);
+		elev.getSensorCollection().setQuadraturePosition(0, timeOutManipulator);
+
+	}
+
+	@Override
+	public void autonomousPeriodic() {
+		fmsData = DriverStation.getInstance().getGameSpecificMessage();
+		System.out.println("FMS IS " + fmsData);
+		cx = table.getEntry("tx").getDouble(999.0);
+		cy = table.getEntry("ty").getDouble(999.0);
+
+		elevEnc = elev.getSensorCollection().getQuadraturePosition();
+		armEnc = arm.getSensorCollection().getQuadraturePosition();
+
+		System.out.println("ELEV ENC " + elevEnc);
+
+		switch (autoSelectedInt) {
+		case 1:
+			// leftSwitch
+			if (fmsData.charAt(0) == 'L') {
+				leftSwitchL();
+			} else if (fmsData.charAt(0) == 'R') {
+				straightAuto();
+			}
+			break;
+		case 7:
+			// centerSwitch
+			if (fmsData.charAt(0) == 'L') {
+				centerSwitchL();
+			} else if (fmsData.charAt(0) == 'R') {
+				centerSwitchR();
+			}
+			break;
+		case 4:
+			// rightSwitch
+			if (fmsData.charAt(0) == 'L') {
+				straightAuto();
+			} else if (fmsData.charAt(0) == 'R') {
+				rightSwitchR();
+			}
+			break;
+		case 2:
+			// leftScale
+			if (fmsData.charAt(1) == 'L') {
+
+			} else if (fmsData.charAt(1) == 'R') {
+				// leftScaleR();
+			}
+			break;
+		case 8:
+			// Empty
+			break;
+		case 5:
+			// rightScale
+			if (fmsData.charAt(1) == 'L') {
+
+			} else if (fmsData.charAt(1) == 'R') {
+				// rightScaleR();
+			}
+			break;
+		case 3:
+			// Empty
+			break;
+		case 9:
+			// centerExchange
+			centerExchange();
+			break;
+		case 6:
+			// Empty
+			break;
+		case 10:
+			// straightForward
+			straightAuto();
+			break;
+		case defaultAuto:
+		default:
+			// Put default auto code here
+			break;
+		}
+	}
+
+	@Override
+	public void teleopPeriodic() {
+		t3 = timer.get();
+
+		cxt = table.getEntry("tx");
+		cyt = table.getEntry("ty");
+		cx = cxt.getDouble(0.0);
+		cy = cyt.getDouble(0.0);
+
+		elevEnc = elev.getSensorCollection().getQuadraturePosition();
+		armEnc = arm.getSensorCollection().getQuadraturePosition();
+
+		// System.out.println("CX " + cx + " CY " + cy);
+		System.out.println("ENCODER ELEV " + elevEnc);
+		System.out.println("ENCODER ARM " + armEnc);
+
+		nvYaw = navx.getAngle();
+		valueEnc = enc1.get();
+		pressure = (250 * (pressureSensor.getVoltage() / 5)) - 17;
+
+		rAxis = js1.getRawAxis(1);
+		lAxis = js2.getRawAxis(1);
+
+		xLBx = xbox.getRawAxis(4);
+		xRBx = xbox.getRawAxis(5);
+		xRAx = xbox.getRawAxis(1);
+		xLAx = xbox.getRawAxis(3);
+
+		rBtn1 = js1.getRawButtonPressed(1); // LATCH
+		rBtn2 = js1.getRawButton(2);
+		rBtn3 = js1.getRawButton(3);
+		rBtn4 = js1.getRawButton(4);
+		rBtn5 = js1.getRawButton(5);
+
+		lBtn1 = js2.getRawButtonPressed(1); // LATCH
+		lBtn2 = js2.getRawButton(2);
+		lBtn3 = js2.getRawButton(3);
+		lBtn4 = js2.getRawButton(4);
+		lBtn5 = js2.getRawButton(5);
+		lBtn6 = js2.getRawButton(6);
+		lBtn7 = js2.getRawButton(7);
+
+		xBtnA = xbox.getRawButton(1);
+		xBtnB = xbox.getRawButton(2);
+		xBtnX = xbox.getRawButtonPressed(3);
+		xBtnY = xbox.getRawButton(4);
+		xBtnL = xbox.getRawButton(5); // LATCH
+		xBtnR = xbox.getRawButton(6); // LATCH
+		xBtnBack = xbox.getRawButton(7);
+		xBtnStart = xbox.getRawButton(8);
+
+		rBtn8 = js1.getRawButtonPressed(8);
+		rBtn9 = js1.getRawButton(9);
+
+		if (js1.getRawButton(11)) {
+			/*
+			 * arm.getSensorCollection().setQuadraturePosition(0,
+			 * timeOutManipulator);
+			 * elev.getSensorCollection().setQuadraturePosition(0,
+			 * timeOutManipulator); sequence = 0; navx.reset();
+			 * System.out.println("                    " + navx.getAngle());
+			 */
+		} else {
+			if (lBtn4) {
+				driveChain.set(DoubleSolenoid.Value.kReverse);
+			} else if (lBtn5) {
+				driveChain.set(DoubleSolenoid.Value.kForward);
+			} else if (lBtn1) {
+				if (driveChain.get() == DoubleSolenoid.Value.kReverse) {
+					driveChain.set(DoubleSolenoid.Value.kForward);
+					gearString = "High";
+				} else if (driveChain.get() == DoubleSolenoid.Value.kForward) {
+					driveChain.set(DoubleSolenoid.Value.kReverse);
+					gearString = "Low";
+				}
+			}
+			if (rBtn4) {
+				grip1.set(DoubleSolenoid.Value.kForward);
+			} else if (rBtn5) {
+				grip1.set(DoubleSolenoid.Value.kReverse);
+			} else if (rBtn1) {
+				if (grip1.get() == DoubleSolenoid.Value.kReverse) {
+					grip1.set(DoubleSolenoid.Value.kForward);
+					gripString = "Engaged";
+				} else if (grip1.get() == DoubleSolenoid.Value.kForward) {
+					grip1.set(DoubleSolenoid.Value.kReverse);
+					gripString = "Disengaged";
+				}
+			}
+
+			if (rBtn2) {
+				manipulatorMovement(0.8);
+			} else if (rBtn3 || xBtnStart) {
+				manipulatorMovement(-0.8);
+			} else {
+				manipulatorMovement(0.0);
+			}
+			
+			System.out.println(" ");
+			System.out.println("LINE TRACKER " + lineTracker.get());
+			System.out.println("T LATCH " + tlatch);
+
+			if (xBtnR) {
+				if (!tlatch) {
+					bikeBrake.set(DoubleSolenoid.Value.kReverse);
+					bikeString = "Disengaged";
+					elevatorMovement(0.9);
+					if (lineTracker.get()) {
+						tlatch = true;
+					}
+				} else {
+					bikeBrake.set(DoubleSolenoid.Value.kForward);
+					bikeString = "Engaged";
+					elevatorMovement(0);
+				}
+			} else if (xBtnX) {
+				bikeBrake.set(DoubleSolenoid.Value.kReverse);
+				bikeString = "Disengaged";
+				elevatorMovement(0.9);
+				tlatch = false; // i sense a trap maybe ill be the culprit
+			} else if (xBtnL) {
+				bikeBrake.set(DoubleSolenoid.Value.kReverse);
+				bikeString = "Disengaged";
+				elevatorMovement(0);
+				tlatch = false;
+			} else if (xBtnBack) {
+				bikeBrake.set(DoubleSolenoid.Value.kReverse);
+				bikeString = "Disengaged";
+				elevatorMovement(-0.35); // -0.25 prior
+			} else {
+				bikeBrake.set(DoubleSolenoid.Value.kForward);
+				bikeString = "Engaged";
+				elevatorMovement(0);
+			}
+			/*
+			 * using for drive chain now if (rBtn4) { climber.set(-0.8); } else
+			 * if (rBtn5) { climber.set(0.5); } else { climber.set(0); }
+			 */
+			System.out.println("");
+			System.out.println("BUTTON 3 IS ACTING " + lBtn3);
+
+			if (lBtn2 || xBtnA) {
+				arm.set(-0.6);
+				armInit = true;
+			} else if (lBtn3 || xBtnY) {
+				arm.set(0.6);
+				armInit = true;
+			} else {
+				arm.set(0.0);
+			}
+
+			m0.set(-rAxis);
+			m1.set(lAxis);
+			m2.set(-rAxis);
+			m3.set(lAxis);
+			// large ass if
+
+			// Uncomment the following line to run diagnostics.
+			diagnosticRun();
+
+			// ShuffleBoard Display
+			SmartDashboard.putBoolean("InRangeArm", armEnc > upperArmEnc && armEnc < lowerArmEnc);
+			SmartDashboard.putBoolean("InRangeElevator", elevEnc > upperElevEnc);
+			// SmartDashboard.putNumber("MatchTime",DriverStation.getMatchTime());
+			SmartDashboard.putBoolean("Safety", xBtnX);
+			SmartDashboard.putString("Drive", gearString);
+			SmartDashboard.putString("Manipulator", gripString);
+			SmartDashboard.putString("Bike", bikeString);
+			SmartDashboard.putNumber("Pressure", pressure);
+			t4 = timer.get();
+
+			// Uncomment the following line to get Loop Time.
+			// SmartDashboard.putNumber("Loop Time (TELEOP)", t4 - t3);
+		}
+
+	}
+
+	@Override
+	public void testPeriodic() {
+	}
+
+	// ENCODER RANGE LIMITS
+
+	public boolean rangeCheckElev() {
+		boolean range = false;
+		if (elevEnc > upperElevEnc) {
+			range = true;
+		}
+		return range;
+	}
+
+	public boolean rangeCheckArm() {
+		boolean range = false;
+		if (armEnc > upperArmEnc && armEnc < lowerArmEnc) {
+			range = true;
+		}
+		return range;
+	}
+
+	// MOTOR CONTROL COMMANDS
+
+	public void elevatorMovement(double speed) {
+		elev.set(speed);
+	}
+
+	public void manipulatorMovement(double speed) {
+		m4.set(speed);
+		m5.set(-speed);
+	}
+
+	public void manipulatorFine(double sp1, double sp2) {
+		m4.set(sp1);
+		m5.set(sp2);
+	}
+
+	public void shiftGear() {
+		if (driveChain.get() == DoubleSolenoid.Value.kReverse) {
+			driveChain.set(DoubleSolenoid.Value.kForward);
+		} else if (driveChain.get() == DoubleSolenoid.Value.kForward) {
+			driveChain.set(DoubleSolenoid.Value.kReverse);
+		}
+	}
+
+	public void diagnosticRun() {
+		// Diagnostics statements, uncomment for verbose printing.
+		pressure = (250 * (pressureSensor.getVoltage() / 5)) - 17;
+		// SmartDashboard.putNumber("m0", pdp.getCurrent(0));
+		// SmartDashboard.putNumber("m2", pdp.getCurrent(1));
+		// SmartDashboard.putNumber("m1", pdp.getCurrent(15));
+		// SmartDashboard.putNumber("m3", pdp.getCurrent(13));
+
+		SmartDashboard.putNumber("Angle (NavX)", nvYaw);
+		SmartDashboard.putNumber("Encoder Ticks (1)", enc1.get());
+		SmartDashboard.putNumber("State (Auto Test)", sequence);
+		SmartDashboard.putBoolean("Initialized (Auto Test)", init);
+	}
+
+	// AUTONOMOUS TYPES
+
+	public void straightAuto() {
+		initSequence(0);
+		timeDrive(1, 1, 2.3);
+	}
+
+	// Left POSITION
+	// + is right, - is left for turn()
+	public void leftSwitchR() {
+		// UNTESTED
+		initSequence(0);
+		timeDrive(1, 1, 4.6);
+		time(2, 0.3);
+		turn(3, 0.28, 90);
+		time(4, 0.3);
+		timeDrive(5, 1, 4.3);
+		time(6, 0.3);
+		/*
+		 * CHECK TO MAKE SURE GOES OUT CORRECT DISTANCE turn(7, 0.28, 180);
+		 * time(8, 0.3); timeDrive(9, 1, 1.5); time(10, 0.3); elevate(10);
+		 * turn(11, 0.28, 270); time(12, 0.3); arm(12); timeDrive(13, 1, 0.45);
+		 * open(14);
+		 */
+
+	}
+
+	public void leftScaleL() {
+		// UNTESTED AND RIDICULOUSLY THEORETICAL
+		initSequence(0);
+		timeDrive(1, 1, 4);
+		time(2, 0.3);
+		turn(3, 0.29, 0);
+		time(4, 0.3);
+		timeDrive(5, 1, 0.8);
+		time(6, 0.3);
+		turn(7, 0.29, 0);
+		timeDrive(8, 1, 2.5);
+		time(9, 0.3);
+		/*
+		 * Check elevateHigh(9); turn(10, 0.28, -90); armHigh(11); //PLEASE
+		 * CHECK IF UNDER SCALE OR BACK //launch(11,0.8,0.8);
+		 */}
+
+	public void leftScaleR() {
+		// UNTESTED AND RIDICULOUSLY THEORETICAL
+		initSequence(0);
+		timeDrive(1, 1, 4.43);
+		time(2, 0.3);
+		turn(3, 0.29, 90);
+		time(4, 0.3);
+		timeDrive(5, 1, 1.75);
+		time(6, 0.1);
+		turn(7, 0.29, 180);
+		time(8, 0.0);
+		timeDrive(9, 1, 1.65);
+		time(10, 0.1);
+		turn(11, 0.29, 180);
+		time(12, 0.1);
+		timeDrive(13, 1, 1.25);
+		time(14, 0.3);
+		turn(15, 0.28, 0);
+		/*
+		 * time(16, 0.3); timeDrive(17, 1, 2.3); time(18, 0.28);
+		 * elevateHigh(18); turn(19, 0.28, -90); armHigh(20);
+		 * launch(21,0.8,0.8); //Check to make sure arm wont hit robot elevator
+		 */
+	}
+
+	public void leftSwitchL() {
+		System.out.println("LEFT SWITCH L iS RUNNING");
+		// Outside Side of Switch
+		System.out.println("  e  " + elevEnc);
+		System.out.println("   a    " + armEnc);
+
+		initSequence(0);
+		timeDrive(1, 1, 3.3);
+		elevate(3);
+		time(2, 0.305);
+		turn(3, 0.296, 85);
+		arm(3);
+		timeDrive(4, 1, 0.5);
+		time(5, 0.4);
+		
+		launch(6, 1.8, 0.3);
+		open(6);
+
+		// Inside Side of Switch
+		/*
+		 * initSequence(0); timeDrive(1, 1, 1.0); turn(2, 0.28, 20);
+		 * timeDrive(3, 1, 1.5); elevate(3); arm(3); turn(4,0.28,0);
+		 * timeDrive(5,1,0.5); open(6);
+		 */
+
+	}
+
+	// CENTER POSITION
+
+	public void centerSwitchL() {
+
+		// UNTESTED
+		initSequence(0);
+		timeDrive(1, 1, 0.8);
+		time(2, 0.3);
+		turn(3, 0.35, -40);
+		time(4, 0.3);
+		timeDrive(5, 1, 1.9);
+		time(6, 0.3);
+		elevate(6);
+		turn(7, 0.32, 0);
+		time(8, 0.3);
+		arm(6);
+		// timeDrive(9, 1, 0.6);
+		launch(9, 1.8, 0.3);
+		open(9);
+
+	}
+
+	public void centerSwitchR() {
+
+		initSequence(0);
+		timeDrive(1, 1, 0.8);
+		time(2, 0.3);
+		turn(3, 0.35, 37);
+		time(4, 0.3);
+		timeDrive(5, 1, 1.9);
+		time(6, 0.3);
+		elevate(6);
+		turn(7, 0.32, 0);
+		time(8, 0.3);
+		arm(6);
+		// timeDrive(9, 1, 0.6);
+		launch(9, 1.8, 0.3);
+		open(9);
+
+	}
+
+	public void centerExchange() {
+		// UNTESTED AND UNIMPORTANT
+		initSequence(0);
+		timeDrive(1, 1, 0.6);
+		time(2, 0.3);
+		turn(3, 0.28, -90);
+		time(4, 0.3);
+		timeDrive(5, 1, 1.2);
+		time(6, 0.3);
+		turn(7, 0.28, -180);
+		time(8, 0.3);
+		timeDrive(9, 1, 0.4);
+	}
+
+	// RIGHT POSITION
+
+	public void rightSwitchL() {
+		// UNTESTED
+		initSequence(0);
+		timeDrive(1, 1, 4.6);
+		time(2, 0.3);
+		turn(3, 0.28, -90);
+		time(4, 0.3);
+		timeDrive(5, 1, 4.3);
+		time(6, 0.3);
+		/*
+		 * CHECK TO MAKE SURE GOES OUT CORRECT DISTANCE turn(7, 0.28, -180);
+		 * time(8, 0.3); timeDrive(9, 1, 1.5); time(10, 0.3); elevate(10);
+		 * turn(11, 0.28, 270); time(12, 0.3); arm(12); timeDrive(13, 1, 0.45);
+		 * open(14);
+		 */
+	}
+
+	public void rightScaleL() {
+		// Untested
+		initSequence(0);
+		// JUST DONT I SWEAR TO SASAI THIS IS A REALLY BAD IDEA PROBS
+		// UNTESTED AND RIDICULOUSLY THEORETICAL
+		initSequence(0);
+		timeDrive(1, 1, 4.43);
+		time(2, 0.3);
+		turn(3, 0.29, -90);
+		time(4, 0.3);
+		timeDrive(5, 1, 1.75);
+		time(6, 0.1);
+		turn(7, 0.29, -180);
+		time(8, 0.0);
+		timeDrive(9, 1, 1.65);
+		time(10, 0.1);
+		turn(11, 0.29, -180);
+		time(12, 0.1);
+		timeDrive(13, 1, 1.25);
+		time(14, 0.3);
+		turn(15, 0.28, 0);
+		/*
+		 * time(16, 0.3); timeDrive(17, 1, 2.3); time(18, 0.28);
+		 * elevateHigh(18); turn(19, 0.28, 90); armHigh(20); launch(21,0.8,0.8);
+		 * //Check to make sure arm wont hit robot elevator
+		 */
+
+	}
+
+	public void rightScaleR() {
+		initSequence(0);
+		timeDrive(1, 1, 4);
+		time(2, 0.3);
+		turn(3, 0.29, 0);
+		time(4, 0.3);
+		timeDrive(5, 1, 0.8);
+		time(6, 0.3);
+		turn(7, 0.29, 0);
+		timeDrive(8, 1, 2.5);
+		time(9, 0.3);
+		/*
+		 * Please Check First elevateHigh(9); turn(10, 0.28, 90); armHigh(11);
+		 * //PLEASE CHECK IF UNDER SCALE OR BACK //launch(11,0.8,0.8);
+		 */
+	}
+
+	public void rightSwitchR() {
+		// Outside Side of Switch
+		initSequence(0);
+		timeDrive(1, 1, 3.3);
+		elevate(3);
+		time(2, 0.305);
+		turn(3, 0.28, -85);
+		arm(3);
+		timeDrive(4, 1, 0.5);
+		time(5, 0.4);
+		open(6);
+		launch(6, 1.8, 0.3);
+
+		// Inside Side of Switch
+		/*
+		 * initSequence(0); timeDrive(1, 1, 1.0); turn(2, 0.28, -20);
+		 * timeDrive(3, 1, 1.5); elevate(3); arm(3); turn(4,0.28,0);
+		 * timeDrive(5,1,0.5); open(6);
+		 */
+	}
+
+	// AUTONOMOUS COMMANDS
+
+	public void initSequence(int seq) {
+		if (sequence == seq) {
+			init = false;
+			sequence++;
+		}
+	}
+
+	public void timeDrive(int seq, int delta, double time) {
+		if (sequence == seq) {
+			if (timeDriveInit(seq, delta, time)) {
+				sequence++;
+			}
+		}
+	}
+
+	public void encoderDrive(int seq, int delta, double enc) {
+		if (sequence == seq) {
+			if (encoderDriveInit(seq, delta, enc)) {
+				sequence++;
+			}
+		}
+	}
+
+	public boolean timeDriveInit(int seq, int delta, double time) {
+		boolean done = false;
+
+		if (!init) {
+			t1 = timer.get();
+			init = true;
+		}
+		// Kepp but Calibrate
+		if (navx.getAngle() > currentAngleObjective + 0.9) {
+			drive(lSpeed - 0.05, rSpeed, delta);
+		} else if (navx.getAngle() < currentAngleObjective - 0.9) {
+			drive(lSpeed, rSpeed - 0.05, delta);
+		} else if (navx.getAngle() > currentAngleObjective + 1.4) {
+			drive(lSpeed - 0.1, rSpeed, delta);
+		} else if (navx.getAngle() < currentAngleObjective - 1.4) {
+			drive(lSpeed, rSpeed - 0.1, delta);
+		} else if (navx.getAngle() > currentAngleObjective + 12.5) {
+			sequence = 999;
+			done = true;
+		} else if (navx.getAngle() < currentAngleObjective - 12.5) {
+			sequence = 999;
+			done = true;
+		} else {
+			drive(lSpeed, rSpeed, delta);
+		}
+
+		// drive(lSpeed, rSpeed, delta);
+
+		t2 = timer.get();
+		if (t2 - t1 >= time) {
+			drive(0, 0, delta);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public boolean encoderDriveInit(int seq, int delta, double ticks) {
+		boolean done = false;
+		if (!init) {
+			SmartDashboard.putNumber("Sequence on", 1);
+			enc1.reset();
+			init = true;
+		}
+
+		if (navx.getAngle() > 1.1) {
+			drive(lSpeed - 0.02, rSpeed, delta);
+		} else if (navx.getAngle() < -1.1) {
+			drive(lSpeed, rSpeed - 0.02, delta);
+		} else {
+			drive(lSpeed, rSpeed, delta);
+		}
+
+		// drive(lSpeed, rSpeed, delta);
+
+		double k = enc1.get() * delta * -1;
+
+		if (k > ticks) {
+			drive(0, 0, delta);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void turn(int seq, double speed, double angle) {
+		if (sequence == seq) {
+			if (turnInit(speed, angle)) {
+				sequence++;
+			}
+		}
+	}
+
+	public boolean turnInit(double speed, double angle) {
+		boolean done = false;
+		double k = navx.getAngle();
+		currentAngleObjective = angle;
+		if (!init) {
+			direction = 1;
+			if (angle > k) {
+				direction = -1;
+			} else {
+				direction = 1;
+			}
+
+			double deltaSpeed = speed * direction;
+			m0.set(deltaSpeed);
+			m1.set(deltaSpeed);
+			m2.set(deltaSpeed);
+			m3.set(deltaSpeed);
+			init = true;
+		}
+
+		if (direction == -1 && (k) > (angle) || direction == 1 && (k) < (angle)) {
+			m0.set(0);
+			m1.set(0);
+			m2.set(0);
+			m3.set(0);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void turnVision(int seq, double speed) {
+		if (sequence == seq) {
+			if (turnVisionInit(speed)) {
+				sequence++;
+			}
+		}
+	}
+
+	public boolean turnVisionInit(double speed) {
+		boolean done = false;
+		if (!init) {
+			direction = 1;
+			if (cx > 0 && cx != 999.0) {
+				direction = -1;
+			} else if (cx < 0 && cx != 999.0) {
+				direction = 1;
+			}
+
+			double deltaSpeed = speed * direction;
+			m0.set(deltaSpeed);
+			m1.set(deltaSpeed);
+			m2.set(deltaSpeed);
+			m3.set(deltaSpeed);
+			init = true;
+		}
+
+		if (direction == -1 && cx > -1 || direction == 1 && cx < 1 || cx == 999.0) {
+			m0.set(0);
+			m1.set(0);
+			m2.set(0);
+			m3.set(0);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void time(int seq, double timeDesired) {
+		if (sequence == seq) {
+			if (timerInit(seq, timeDesired)) {
+				sequence++;
+			}
+		}
+	}
+
+	public boolean timerInit(int seq, double time)
+	// time is positive
+	{
+		boolean done = false;
+		if (!init) {
+			t1 = timer.get();
+			init = true;
+		}
+		t2 = timer.get();
+		if (t2 - t1 >= time) {
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void drive(double lSpeed, double rSpeed, int direction) {
+		m0.set(rSpeed * direction);
+		m1.set(lSpeed * direction * -1);
+		m2.set(rSpeed * direction);
+		m3.set(lSpeed * direction * -1);
+	}
+
+	public void elevate(int seq) {
+		if (elevBool) {
+			if (sequence >= seq) {
+				if (elevateInit(seq)) {
+
+				}
+			}
+		}
+
+	}
+
+	public boolean elevateInit(int seq) {
+		boolean done = false;
+
+		// REMEMBER TO RESET ENCODERS IN AUTO INIT
+		bikeBrake.set(DoubleSolenoid.Value.kReverse);
+		elev.set(0.8);
+
+		if (elev.getSensorCollection().getQuadraturePosition() < -9400) {
+			bikeBrake.set(DoubleSolenoid.Value.kForward);
+			elev.set(0);
+			elevBool = false;
+			done = true;
+		}
+
+		return done;
+		/*
+		 * boolean done = false; if (rangeCheckElev()) { elev.set(speed); } else
+		 * if (!rangeCheckElev()) { done = true; } return done;
+		 */
+	}
+
+	public boolean elevateInitTime(int seq)
+	// time is positive
+	{
+		boolean done = false;
+		bikeBrake.set(DoubleSolenoid.Value.kReverse);
+		elev.set(0.8);
+		if (!init) {
+			t1 = timer.get();
+			init = true;
+		}
+		t2 = timer.get();
+		if (t2 - t1 >= 2) {
+			bikeBrake.set(DoubleSolenoid.Value.kForward);
+			elev.set(0);
+			elevBool = false;
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void elevateHigh(int seq) {
+		if (elevBool) {
+			if (sequence <= seq) {
+				if (elevateInitH(seq)) {
+					eBool = false;
+				}
+			}
+		}
+	}
+
+	public boolean elevateInitH(int seq) {
+		boolean done = false;
+		if (eBool) {
+			// REMEMBER TO RESET ENCODERS IN AUTO INIT
+			bikeBrake.set(DoubleSolenoid.Value.kReverse);
+			elev.set(0.8);
+
+			if (elev.getSensorCollection().getQuadraturePosition() < -15000) {
+				bikeBrake.set(DoubleSolenoid.Value.kForward);
+				elev.set(0);
+				elevBool = false;
+				done = true;
+			}
+		} else {
+			done = true;
+		}
+		return done;
+		/*
+		 * boolean done = false; if (rangeCheckElev()) { elev.set(speed); } else
+		 * if (!rangeCheckElev()) { done = true; } return done;
+		 */
+	}
+
+	public void arm(int seq) {
+		if (armBool) {
+			if (sequence >= seq) {
+				if (armInitTime(seq)) {
+					armBool = false;
+				}
+			}
+		}
+	}
+
+	public boolean armInit(int seq) {
+
+		boolean done = false;
+		// REMEMBER TO RESET ENCODERS IN AUTO INIT
+		arm.set(-0.45);
+
+		if (arm.getSensorCollection().getQuadraturePosition() < -2700) {
+			arm.set(0);
+			done = true;
+		}
+		return done;
+
+	}
+
+	public boolean armInitTime(int seq) {
+
+		boolean done = false;
+		arm.set(-0.45);
+		if (!init) {
+			t1 = timer.get();
+			init = true;
+		}
+		t2 = timer.get();
+		if (t2 - t1 >= 1.5) {
+			arm.set(0);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public void armHigh(int seq) {
+		if (armBool) {
+			if (sequence <= seq) {
+				if (armInit(seq)) {
+					armBool = false;
+					sequence++;
+				}
+			}
+		}
+	}
+
+	public boolean armInitH(int seq) {
+
+		boolean done = false;
+		// REMEMBER TO RESET ENCODERS IN AUTO INIT
+		arm.set(0.45);
+
+		if (arm.getSensorCollection().getQuadraturePosition() < -100) {
+			arm.set(0);
+			done = true;
+		}
+		return done;
+		/*
+		 * boolean done = false; if (rangeCheckArm()) { elev.set(speed); } else
+		 * if (!rangeCheckArm()) { done = true; } return done;
+		 */
+	}
+
+	public void open(int state) {
+		if (sequence == state) {
+			grip1.set(DoubleSolenoid.Value.kReverse);
+		}
+	}
+
+	public void launch(int seq, double time, double speed) {
+		if (sequence == seq) {
+			if (timeIntakeInit(seq, time, speed)) {
+				sequence++;
+			}
+		}
+	}
+
+	public boolean timeIntakeInit(int seq, double time, double speed) {
+		boolean done = false;
+		// REMEMBER TO START TIMER IN AUTO INIT
+		if (!init) {
+			t1 = timer.get();
+			init = true;
+		}
+		manipulatorMovement(-speed);
+
+		t2 = timer.get();
+		if (t2 - t1 >= time) {
+			manipulatorMovement(0);
+			init = false;
+			done = true;
+		}
+		return done;
+	}
+
+	public boolean shiftGear(int seq, Value shift) {
+		boolean done = false;
+		if (driveChain.get() == DoubleSolenoid.Value.kReverse && !done) {
+			driveChain.set(DoubleSolenoid.Value.kForward);
+			System.out.println("Drive Train: HIGH");
+			done = true;
+		} else if (driveChain.get() == DoubleSolenoid.Value.kForward && !done) {
+			driveChain.set(DoubleSolenoid.Value.kReverse);
+			System.out.println("Drive Train: LOW");
+			done = true;
+		}
+		return done;
+	}
+
+	public boolean shiftGrip(int seq, Value shift) {
+		boolean done = false;
+		if (grip1.get() == DoubleSolenoid.Value.kReverse
+				/* && grip2.get() == DoubleSolenoid.Value.kReverse */ && !done) {
+			grip1.set(DoubleSolenoid.Value.kForward);
+			grip2.set(DoubleSolenoid.Value.kForward);
+			System.out.println("Grip: HIGH");
+			done = true;
+		} else if (grip1
+				.get() == DoubleSolenoid.Value.kForward /*
+														 * && grip2.get() ==
+														 * DoubleSolenoid.Value.
+														 * kForward
+														 */
+				&& !done) {
+			grip1.set(DoubleSolenoid.Value.kReverse);
+			grip2.set(DoubleSolenoid.Value.kReverse);
+			System.out.println("Grip: LOW");
+			done = true;
+		}
+		return done;
+	}
+
+	public class GenericPidOutput implements PIDOutput {
+		double pidOutput;
+
+		@Override
+		public void pidWrite(double output) {
+			pidOutput = output;
+		}
+
+		// Constructor
+		public GenericPidOutput() {
+			pidOutput = 0.0;
+		}
+	}
+
+	public class GenericPidSource implements PIDSource {
+		double pidInput;
+		PIDSourceType pidType;
+
+		@Override
+		public double pidGet() {
+			return pidInput;
+		}
+
+		@Override
+		public void setPIDSourceType(PIDSourceType pidSource) {
+			pidType = pidSource;
+		}
+
+		@Override
+		public PIDSourceType getPIDSourceType() {
+			return pidType;
+		}
+
+		// Constructor
+		public GenericPidSource() {
+			pidInput = 0.0;
+			pidType = PIDSourceType.kDisplacement;
+		}
+	}
+}
+
+
+
