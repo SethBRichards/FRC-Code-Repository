@@ -1,8 +1,3 @@
-# MASTER LOCATED ON TOSHIBA
+# MASTER LOCATED ON TOSHIBA Laptop
 
 do not overwrite master w/o perm.
-
-please.
-don't.
-
-i mean it.
